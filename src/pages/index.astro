@@ -89,6 +89,7 @@ const ld = {
       <a href="#flags-s">Red flags</a>
       <a href="#scale-s">When to worry</a>
       <a href="#history-s">50 years</a>
+      <a href="#outlook-s">Long run</a>
       <a href="#cases-s">Past crises</a>
       <a href="#forecast-s">Recession model</a>
       <a href="#lead-s">Before crises</a>
@@ -152,14 +153,33 @@ const ld = {
       <div class="card"><div class="scorecard" id="scorecard"></div></div>
     </section>
 
+    <section class="section" id="outlook-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">05</span>The long run · not in the score</p><h2 class="section-title">How much is left? The next ten years</h2></div>
+        <p class="lede">The score asks whether something breaks in the next year or two. This asks something else: what US stocks have returned over the following decade when they started from prices like today's, and what Treasuries pay instead. Expensive markets say little about when they fall, but they have reliably meant less to come.</p></header>
+      <div class="outlook-grid tiles">
+        <div class="card ol"><p class="ov" id="ol-stocks">--</p><p class="ot">US stocks: expected return a year after inflation, next 10 years</p><p class="muted tiny" id="ol-stocks-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="ol-bonds">--</p><p class="ot">10-year inflation-protected Treasuries: yield after inflation, locked in if held</p><p class="muted tiny" id="ol-bonds-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="ol-neg">--</p><p class="ot">Chance stocks lose money after inflation over the decade</p><p class="muted tiny" id="ol-neg-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="ol-tips">--</p><p class="ot">Chance stocks do worse than those Treasuries</p><p class="muted tiny">from the model's past misses</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Beyond history</h3><span class="meta">today vs the highest with a known 10-year outcome</span></div>
+          <table class="mini" id="beyond-table"></table>
+          <p class="small muted">No month with a known outcome was this stretched, so no model is fitted on these: any number would be extrapolation. They point the same way as the CAPE-based estimate, only further.</p>
+        </div>
+        <div class="card prose-card"><h3>How sure is this?</h3><p class="muted small" id="ol-how">&nbsp;</p></div>
+      </div>
+    </section>
+
     <section class="section" id="cases-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">05</span>Concrete examples</p><h2 class="section-title">What it said before, during and after</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">06</span>Concrete examples</p><h2 class="section-title">What it said before, during and after</h2></div>
         <p class="lede">Ten moments from the last fifty years, scored with only the data that existed at the time.</p></header>
       <div class="cases tiles" id="case-list"></div>
     </section>
 
     <section class="section" id="forecast-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">06</span>The early-warning model</p><h2 class="section-title">Recession probability, next 12 months: <span class="gold" id="fc-prob">--</span></h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">07</span>The early-warning model</p><h2 class="section-title">Recession probability, next 12 months: <span class="gold" id="fc-prob">--</span></h2></div></header>
       <div class="grid-3">
         <div class="card prose-card">
           <p>
@@ -181,7 +201,7 @@ const ld = {
     </section>
 
     <section class="section" id="lead-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">07</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">08</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
         <p class="lede">Every crisis and 20% stock-market fall since 1973, lined up on the month it started. Market gauges stay ordinary until the month trouble hits; the signals that move earlier are in the economy and the credit cycle. None of them can see an overnight crash coming.</p></header>
       <div class="grid-2">
         <div class="card">
@@ -198,7 +218,7 @@ const ld = {
     </section>
 
     <section class="section" id="stag-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">08</span>Inflation, the Fed and the worst cases</p><h2 class="section-title">Stagflation, or worse?</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">09</span>Inflation, the Fed and the worst cases</p><h2 class="section-title">Stagflation, or worse?</h2></div>
         <p class="lede"><strong>Stagflation</strong> is inflation that stays high while the economy weakens: the 1970s, 1980–82, briefly 1990 and 2008. We define it as inflation of 5% or more while unemployment has risen at least half a point from its 12-month low.</p></header>
       <div class="grid-3">
         <div class="card">
@@ -226,7 +246,7 @@ const ld = {
     </section>
 
     <section class="section" id="markets-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">09</span>Same metal, many markets</p><h2 class="section-title">Gold, priced everywhere at once</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">10</span>Same metal, many markets</p><h2 class="section-title">Gold, priced everywhere at once</h2></div>
         <p class="lede">No government sets the price of gold. It trades around the clock in London, New York, Shanghai, Zurich, Mumbai and on-chain, and arbitrage keeps every venue within a few dollars of the others. When a venue drifts, metal flows to it; a dislocation is an early sign that a market is breaking.</p></header>
       <div class="grid-2">
         <div class="card">
@@ -245,7 +265,7 @@ const ld = {
     </section>
 
     <section class="section" id="debt-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">10</span>The fiscal fuse</p><h2 class="section-title">Debt keeps compounding</h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>The fiscal fuse</p><h2 class="section-title">Debt keeps compounding</h2></div></header>
       <div class="card debt-counter">
         <p class="eyebrow">US federal debt · live estimate</p>
         <p class="counter" id="counter">$--</p>
@@ -272,7 +292,7 @@ const ld = {
     </section>
 
     <section class="section method" id="method-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>How it works</p><h2 class="section-title">The method, in plain English</h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">12</span>How it works</p><h2 class="section-title">The method, in plain English</h2></div></header>
       <div class="steps tiles">
         <div class="card step">
           <span class="step-n">1</span><h3>Collect</h3>
@@ -313,6 +333,7 @@ const ld = {
           <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added the value of US company shares against GDP (a record 255% at the time, including privately held firms; about 210% for listed companies alone) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
           <li><strong>v5 · Fairer averaging and calibrated labels.</strong> Inputs that measure the same thing are now averaged together first (eight consumer-inflation measures had been outvoting producer prices, expectations and the dollar; four stress indices outvoted the rest), which improved crisis warning a year ahead from 0.73 to 0.75. Bands are now set where the historical odds actually change, and the page shows those odds: the old "calm" label covered months whose odds were average. Tested and rejected: weights fitted by a model (worse out of sample: a dozen crises are too few to fit weights on) and an oil-shock signal (no added power; oil was then just below its three-year high).</li>
           <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which keeps it to 1974, 1980 and 2008–09. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
+          <li><strong>Research after v6 · household credit and the 10-year yield.</strong> Tested against the same rule and rejected, none adding anything the score didn't already know: credit-card, consumer, mortgage and auto-loan delinquencies, the Treasury term premium, the Italy–Germany bond spread, the real 10-year yield, its 12-month change, long rates rising while the Fed cuts, and two refinements of the yield curve (stripping out the term premium cut recession warning from 0.90 to 0.73). Stock valuations and the AI investment boom went into a separate long-run panel instead, where the evidence for them is: they predict ten-year returns.</li>
           <li><strong>Research after v5 · signals before crises.</strong> An event study of 20 crisis and crash starts showed market gauges (stress indices, VIX, credit spreads, stock trends) don't move until the month trouble hits; if anything, volatility is unusually low three months before. Building permits, bank lending standards and jobless claims did move earlier and are shown in the pre-crisis checklist, but adding them to the score or the recession model didn't improve either out of sample, so the formula is unchanged.</li>
         </ol>
       </div>
@@ -324,7 +345,7 @@ const ld = {
     </section>
 
     <section class="section" id="feeds-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">12</span>Data feeds</p><h2 class="section-title">Sources, live status</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">13</span>Data feeds</p><h2 class="section-title">Sources, live status</h2></div>
         <p class="lede">Everything on this page comes from one public JSON file, rebuilt every 15 minutes: <a href="/live/collapse.json"><code>/live/collapse.json</code></a>. Each series stays under its publisher's terms; our scores are free to reuse under <a href={LICENSE} target="_blank" rel="noopener">CC BY 4.0</a>.</p></header>
       <pre class="terminal" id="terminal" data-nosnippet>$ connecting to willthesystemcollapse.com/live/collapse.json …</pre>
     </section>
@@ -753,6 +774,29 @@ const ld = {
     if (o.pct >= 85) $('flags-high').innerHTML += `<li><span>Oil (WTI), 12-month change · watch item, not scored</span><b>${pctf(o.change_1y, 0)}</b><em>${o.pct}</em></li>`;
   }
 
+  function drawOutlook(d: any) {
+    const o = d.outlook;
+    if (!o) return;  // its sources failed this run: the panel keeps its placeholders
+    const sg = (v: number, dp = 1) => `${v > 0 ? '+' : ''}${v.toFixed(dp)}%`;
+    $('ol-stocks').textContent = sg(o.expected);
+    $('ol-stocks-note').textContent = `80% range ${sg(o.lo80)} to ${sg(o.hi80)}; the average decade since 1881 gave ${sg(o.average)}`;
+    $('ol-bonds').textContent = sg(o.tips, 2);
+    const sp = o.since_peak_rate;
+    $('ol-bonds-note').textContent = sp
+      ? `The 10-year yield is ${o.y10.toFixed(2)}%, up ${sp.y10_change.toFixed(2)} pp since ${monthName(sp.month)} although the Fed has cut ${(-sp.fed_change).toFixed(2)} pp: lenders want more to lend long`
+      : `The ordinary 10-year yield is ${o.y10.toFixed(2)}%`;
+    $('ol-neg').textContent = `${o.p_negative}%`;
+    $('ol-neg-note').textContent = `${o.p_negative_all}% of all decades since 1881`;
+    $('ol-tips').textContent = `${o.p_below_tips}%`;
+    $('beyond-table').innerHTML = `<thead><tr><th></th><th>Now</th><th>Known high</th></tr></thead><tbody>` + o.beyond
+      .map((b: any) => `<tr><th>${esc(b.label)}${b.note ? ` <span class="muted">· ${esc(b.note)}</span>` : ''}</th><td class="down">${b.now.toFixed(1)}%</td><td class="muted">${b.known_max.toFixed(1)}% · ${monthName(b.known_max_month)}</td></tr>`)
+      .join('') + '</tbody>';
+    const e = o.expensive;
+    $('ol-how').textContent = `The estimate averages two straight-line fits on Robert Shiller's data since 1871, each made only from decades already over: one on CAPE (price against ten years of earnings, now ${o.cape.toFixed(1)}; the record is ${o.cape_max.toFixed(1)} in ${monthName(o.cape_max_month)}) and one on the excess CAPE yield, which compares earnings with what bonds pay. ` +
+      (e ? `Every month with a CAPE this high (${monthName(e.first)} to ${monthName(e.last)}) was followed by a decade of ${sg(e.worst)} to ${sg(e.best)} a year, but that is one episode, the dot-com bust. ` : '') +
+      `In January 2000 the model said ${sg(o.y2000.forecast)} a year; the decade delivered ${sg(o.y2000.actual)}. Over the last 20 years of known outcomes it was too gloomy by ${o.bias20.toFixed(1)} points a year (the decade from ${monthName(o.last_decade.start)} returned ${sg(o.last_decade.actual)} a year). Ten-year windows overlap, so 145 years hold only about 14 independent decades: read it as a range, not a forecast. Not financial advice.`;
+  }
+
   function drawInflation(d: any) {
     const c = Object.fromEntries(d.components.map((x: any) => [x.key, x]));
     $('stag-now').textContent = d.stagflation.toFixed(0);
@@ -813,6 +857,7 @@ const ld = {
     drawOdds(d);
     drawLeads(d);
     drawInflation(d);
+    drawOutlook(d);
     drawVenues(d);
     drawDebt(d);
     drawTicker(d);
@@ -938,6 +983,12 @@ const ld = {
   .odds-head p { max-width: 80ch; }
   .odds-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   @media (max-width: 1200px) { .odds-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .outlook-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .outlook-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ol { display: grid; gap: 6px; align-content: start; padding: 14px 16px !important; }
+  .ol .ov { font: 600 1.9rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--gold); }
+  .ol .ot { font-weight: 600; font-size: 0.84rem; line-height: 1.3; }
+  #outlook-s .grid-2 { margin-top: 0; }
   :global(.odd) { display: grid; gap: 4px; align-content: start; padding: 14px 16px !important; }
   :global(.odd .ov) { font: 600 1.9rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
   :global(.odd .ot) { font-weight: 600; font-size: 0.84rem; line-height: 1.3; }

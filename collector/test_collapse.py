@@ -34,4 +34,10 @@ C = {'old': dict(label='A', now=('2026-10-01', 5.0), hist={'1990-01': 6.0, '2000
 gap = dict(key='g', label='G', unit='pp', value=2.0, date='2026-10-01', since='1997', usual=[0.1, 0.4], unusual=True)
 u = {x['key']: x['note'] for x in score.unusual(db, C, lambda c: '', [gap])}
 assert u == {'old': 'a level last seen in 1990', 'dip': 'near the record set in Feb 2026', 'g': 'usually +0.10 pp to +0.40 pp (since 1997)'}, u
+# the 10-year outlook: a market returning a steady 5% a year after inflation must be forecast at 5%, whatever its CAPE
+ms = score.span('1900-01', '2026-09')
+P = {m: 1.05 ** (i / 12) for i, m in enumerate(ms)}
+flat = lambda v: {m: v for m in ms}
+combo, y = score.ten_year(P, flat(0.0), flat(1.0), flat(2.0), {m: 10 + i % 7 for i, m in enumerate(ms)})
+assert abs(y['1950-01'] - 5) < 1e-9 and abs(combo[max(combo)] - 5) < 1e-6, (y['1950-01'], combo[max(combo)])
 print('ok')

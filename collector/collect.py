@@ -10,7 +10,7 @@ history, read cross-origin). Stdlib only.
 Cron runs it every 15 minutes. Each series has a TTL, so a run normally fetches only the live prices; a failed source
 keeps its last good data and is reported in the JSON's `sources` list.
 """
-import argparse, csv, io, json, os, re, sqlite3, sys, time, urllib.request, zipfile
+import argparse, csv, functools, io, json, os, re, sqlite3, sys, time, urllib.request, zipfile
 import xml.etree.ElementTree as ET
 from html import escape
 from datetime import date, datetime, timedelta, timezone
@@ -230,6 +230,24 @@ def gold_ny_premium(_):
     return [(now_iso(), 100 * (float(f['price']) / spot - 1 - 0.04 * days / 365))]
 
 
+@functools.lru_cache(maxsize=1)
+def shiller_cells():
+    """Robert J. Shiller's monthly US stock-market data (shillerdata.com; the file link changes, so find it first)."""
+    import xls_min  # ponytail: a 70-line stdlib reader for the numeric cells of an .xls, instead of a dependency
+    page = get('https://shillerdata.com/').decode()
+    return xls_min.sheet(get('https:' + re.search(r'href="(//[^"]*/ie_data\.xls)', page).group(1)), 'Data')
+
+
+def shiller(col):
+    """One column of Shiller's Data sheet (1 price, 2 dividend, 4 CPI, 6 10-year yield, 12 CAPE) as monthly rows. Only
+    derived numbers (the 10-year outlook, the CAPE level) are published, never the series. The newest row is partial
+    (a mid-month close and an estimated CPI), so it is left out."""
+    cells = shiller_cells()
+    month = lambda r: f'{int(cells[r, 0]):04d}-{round((cells[r, 0] - int(cells[r, 0])) * 100):02d}-01'
+    newest = max(month(r) for (r, c) in cells if c == 1 and r >= 8 and (r, 0) in cells)
+    return [(month(r), v) for (r, c), v in sorted(cells.items()) if c == col and r >= 8 and (r, 0) in cells and month(r) < newest]
+
+
 def kraken(pair):
     r = json.loads(get(f'https://api.kraken.com/0/public/Ticker?pair={pair}'))['result']
     return [(now_iso(), num(next(iter(r.values()))['c'][0]))]
@@ -370,6 +388,15 @@ SERIES = {
     'IORB': (fred, 'IORB', D, 'Interest on reserve balances', 'Federal Reserve via FRED'),
     'IOER': (fred, 'IOER', W, 'Interest on excess reserves (to July 2021)', 'Federal Reserve via FRED'),
     'SWAP_LINES': (fred, 'SWPT', D, 'Fed dollar swap lines with foreign central banks', 'Federal Reserve via FRED'),
+    # the long run (outside the score): Shiller's data for the 10-year outlook, and ratios beyond history
+    **{f'SH_{k}': (shiller, c, W, f'{name}, monthly (Shiller)', 'Robert J. Shiller, shillerdata.com')
+       for k, c, name in (('P', 1, 'S&P composite price'), ('D', 2, 'S&P composite dividends'), ('CPI', 4, 'US consumer prices'),
+                          ('GS10', 6, '10-year Treasury yield'), ('CAPE', 12, 'Cyclically adjusted P/E'))},
+    'HH_EQ_SHARE': (fred, 'BOGZ1FL153064486Q', M, 'Households: stocks as a share of financial assets', 'Federal Reserve Z.1 via FRED'),
+    'HH_NW': (fred, 'TNWBSHNO', M, 'Household net worth', 'Federal Reserve Z.1 via FRED'),
+    'DPI': (fred, 'DPI', M, 'Disposable personal income', 'BEA via FRED'),
+    'PROFITS': (fred, 'CP', M, 'Corporate profits after tax', 'BEA via FRED'),
+    'TECH_INV': (fred, 'A679RC1Q027SBEA', M, 'Business investment in computers, software and data equipment', 'BEA via FRED'),
 }
 INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 

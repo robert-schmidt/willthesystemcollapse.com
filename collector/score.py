@@ -11,7 +11,7 @@ Five pillars, each 0–1 (higher = more stress); score = 100 × (2·stress + war
   buildup   — are excesses building? Private credit growth over 3 years (BIS) and how cheap credit was two years ago.
 History uses expanding-window percentiles and a walk-forward model: what the gauge would have said at the time.
 """
-import bisect, math
+import bisect, math, sys
 from itertools import groupby
 import forecast
 from datetime import datetime, timezone, date
@@ -675,6 +675,7 @@ def report(db, SERIES):
         flags=dict(high=flags, low=calm),
         unusual=unusual(db, C, lambda c: shown(c, real80), gaps),
         pairs=gaps,
+        outlook=long_run(db),
         forecast=dict(probability=round(100 * F['now'], 1), percentile=round(100 * pscore['warning']),
                       inputs=[dict(key=k, label=names[k], value=round(v, 3), weight=round(F['weights'][k], 3))
                               for k, v in F['x'].items()],
@@ -803,6 +804,104 @@ def markets(db):
         house_prices=dict(change_1y=round(latest(db, 'HPI')[1] / value_at(db, 'HPI', days_before(latest(db, 'HPI')[0], 365)) - 1, 4),
                           date=latest(db, 'HPI')[0]),
         vix=y('VIX'),
+    )
+
+
+# ---- the long run: outside the score ----
+
+def long_run(db):
+    try:
+        return outlook(db)
+    except Exception as e:  # its sources (Shiller's file above all) must never stop the monitor
+        print(f'! outlook: {e!r}', file=sys.stderr)
+        return None
+
+
+def quantile(v, p):
+    v = sorted(v)
+    k = (len(v) - 1) * p
+    f = int(k)
+    return v[f] + (v[min(f + 1, len(v) - 1)] - v[f]) * (k - f)
+
+
+def ten_year(P, D, CPI, GS10, CAPE, H=120, MIN=240):
+    """Walk-forward 10-year real total-return forecasts {month: % a year} and the outcomes {month: % a year}."""
+    ms = sorted(P)
+    tr, d = {ms[0]: 1.0}, D[ms[0]]
+    for a, b in zip(ms, ms[1:]):
+        d = D.get(b, d)  # dividends arrive months late: carry the last one
+        tr[b] = tr[a] * (P[b] + d / 12) / P[a] * CPI[a] / CPI[b]  # real total return, dividends reinvested
+    y = {m: 100 * ((tr[shift(m, H)] / tr[m]) ** (12 / H) - 1) for m in ms if shift(m, H) in tr}
+    X = {'cape': {m: math.log(v) for m, v in CAPE.items()},
+         'ecy': {m: 100 / v - GS10[m] + 100 * ((CPI[m] / CPI[shift(m, -120)]) ** .1 - 1) for m, v in CAPE.items() if shift(m, -120) in CPI}}
+    fc = {}
+    for k, x in X.items():  # running sums for OLS, adding each decade once it has ended
+        s, j, train, fc[k] = [0.0] * 5, 0, sorted(m for m in x if m in y), {}
+        for t in sorted(x):
+            while j < len(train) and train[j] <= shift(t, -H):
+                m = train[j]
+                j += 1
+                for i, v in enumerate((1, x[m], y[m], x[m] ** 2, x[m] * y[m])):
+                    s[i] += v
+            if s[0] >= MIN:
+                den = s[0] * s[3] - s[1] ** 2
+                b = (s[0] * s[4] - s[1] * s[2]) / den if den else 0.0
+                fc[k][t] = (s[2] - b * s[1]) / s[0] + b * x[t]
+    return {t: (fc['cape'][t] + fc['ecy'][t]) / 2 for t in fc['cape'] if t in fc['ecy']}, y
+
+
+def outlook(db, H=120):
+    """What US stocks returned over the next 10 years from valuations like today's, against what 10-year inflation-protected
+    Treasuries pay. Walk-forward on Robert Shiller's data since 1871: at each month, a straight line fitted only on decades
+    already over, from log CAPE and from the excess CAPE yield (earnings yield minus the real 10-year yield), averaged.
+    The 80% range and the odds come from the model's own past misses. Valuation ratios with no precedent are shown, not
+    modelled: any fit would be extrapolating far past every known outcome."""
+    CAPE = monthly(db, 'SH_CAPE')
+    combo, y = ten_year(*(monthly(db, f'SH_{k}') for k in ('P', 'D', 'CPI', 'GS10')), CAPE, H)
+    now, f = max(combo), combo[max(combo)]
+    known = [t for t in combo if t in y]
+    err = [y[t] - combo[t] for t in known]
+    tips = latest(db, 'DFII10')
+    expensive = [m for m in y if CAPE.get(m, 0) >= CAPE[now]]
+    recent = [t for t in known if t > shift(max(known), -240)]
+
+    # ratios beyond history: today vs the highest value whose 10-year outcome is known
+    today = date.today().strftime('%Y-%m')
+    months = span('1950-01', today)
+    Q = lambda k: ffill(monthly(db, k), months, 4)
+    gdp, dpi = Q('GDP'), Q('DPI')
+    beyond = []
+    for key, label, num, den, scale, note in [
+        ('valuation', 'US company shares, % of GDP', 'EQUITY_MV', gdp, 0.1, 'includes privately held firms'),
+        ('hh_equity', 'Households’ financial assets held in stocks', 'HH_EQ_SHARE', None, 1, ''),
+        ('net_worth', 'Household net worth, % of disposable income', 'HH_NW', dpi, 0.1, ''),
+        ('profits', 'Corporate profits after tax, % of GDP', 'PROFITS', gdp, 100, 'high margins have tended to fall back'),
+        ('tech', 'Investment in computers, software and data equipment, % of GDP', 'TECH_INV', gdp, 100, 'the AI build-out'),
+    ]:
+        series = {m: scale * v / (den[m] if den else 1) for m, v in Q(num).items() if not den or m in den}
+        old = {m: v for m, v in series.items() if m <= shift(today, -H)}
+        top = max(old, key=old.get)
+        beyond.append(dict(key=key, label=label, now=round(series[max(series)], 1), date=max(monthly(db, num)),
+                           known_max=round(old[top], 1), known_max_month=top, note=note))
+
+    # long rates vs the Fed: the 10-year yield since the Fed's last peak rate, if it has cut at least half a point since
+    ff, dff_d = monthly(db, 'FEDFUNDS'), latest(db, 'DFF')
+    peak = max((m for m in ff if m >= shift(today, -36)), key=lambda m: (ff[m], m))
+    easing = dff_d[1] <= ff[peak] - 0.5
+    y10 = latest(db, 'DGS10')
+    since = dict(month=peak, fed_change=round(dff_d[1] - ff[peak], 2),
+                 y10_change=round(y10[1] - monthly(db, 'GS10')[peak], 2)) if easing else None
+    return dict(
+        month=now, expected=round(f, 1), lo80=round(f + quantile(err, .1), 1), hi80=round(f + quantile(err, .9), 1),
+        p_negative=round(100 * sum(f + e < 0 for e in err) / len(err)), p_negative_all=round(100 * sum(v < 0 for v in y.values()) / len(y)),
+        p_below_tips=round(100 * sum(f + e < tips[1] for e in err) / len(err)), average=round(sum(y.values()) / len(y), 1),
+        cape=round(CAPE[now], 1), cape_max=round(max(CAPE.values()), 1), cape_max_month=max(CAPE, key=CAPE.get),
+        tips=tips[1], tips_date=tips[0], y10=y10[1],
+        y2000=dict(forecast=round(combo['2000-01'], 1), actual=round(y['2000-01'], 1)),
+        expensive=dict(months=len(expensive), first=min(expensive), last=max(expensive),
+                       worst=round(min(y[m] for m in expensive), 1), best=round(max(y[m] for m in expensive), 1)) if expensive else None,
+        bias20=round(sum(y[t] - combo[t] for t in recent) / len(recent), 1), last_decade=dict(start=max(known), actual=round(y[max(known)], 1)),
+        beyond=beyond, since_peak_rate=since,
     )
 
 

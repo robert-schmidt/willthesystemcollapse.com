@@ -10,7 +10,10 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   weights, an oil-shock (Hamilton NOPI) input, Fed funds/hikes/real rate/10y−2y in the recession model, claims, permits,
   lending standards, Sahm and inflation in the recession model, RMS/top-half averaging; in v6 research: more weight on
   valuations (MV/GDP, CAPE, household equity share: regime markers, not timing), the GHSS R-zone, sudden-move breadth,
-  credit growth or a spread × credit term in the recession model, investors' public warnings (not backtestable).
+  credit growth or a spread × credit term in the recession model, investors' public warnings (not backtestable);
+  after v6: delinquencies (cards, consumer, all loans, mortgages, NY Fed auto), ACM term premium (level, change), the
+  expectations spread or Engstrom–Sharpe forward spread in the recession model, Italy−Germany 10y, real 10y yield, its
+  12-month change, "vigilantes" (10y up while the Fed cuts).
   The acceptance rule used for v6 (keep using it): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
   0; recession and severe ahead-12 down no more than 0.02; ≥ 70 band still ≥ 90% near a crisis; gain in 1973–99 and 2000+.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
@@ -31,6 +34,9 @@ forward-filled ≤ 6 months so history matches the live reading; quarterly/annua
 walk-forward recession model's percentile), money, fiscal, build-up (BIS 3y Δ private credit/GDP, Baa−10y from 24 months
 earlier). Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical
 crisis odds change (75+ = 1974, 1980, 2008–09 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
-moves, markets that should agree, incl. the SHFE gold premium) without entering the score. The recession model (forecast.py) is a ridge logistic
+moves, markets that should agree, incl. the SHFE gold premium) without entering the score. `outlook()` (also outside the
+score) is the expected 10-year real stock return: walk-forward OLS on log CAPE and the excess CAPE yield (Shiller's
+ie_data.xls via `xls_min.py`), averaged; ratios beyond any known 10-year outcome are shown, never modelled. Shiller's
+data: publish derived numbers only, never the series. The recession model (forecast.py) is a ridge logistic
 regression on the 10y−3m spread, its 18-month low, NFCI, NFCI 6-month change and the excess bond premium, refitted every
 January since 1979 (out-of-sample AUC ≈ 0.90).
