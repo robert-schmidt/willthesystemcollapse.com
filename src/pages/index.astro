@@ -1,0 +1,1188 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+import { ARCHIVE, LICENSE, REPO } from '../site';
+
+// Live data: /live/collapse.json, written every 15 minutes by collector/collect.py on the server (see README.md).
+// collect.py also writes the live answer, score and summary into the built page (the ids below) and the dateModified
+// fields, so the first paint and crawlers see the reading before the script runs.
+const SITE = Astro.site!.href.replace(/\/$/, '');
+const ODDS = [
+  ['crisis_12m', 'Crisis under way or starting within 12 months', 'any of the 13 episodes since 1973'],
+  ['crisis_24m', 'Crisis within 24 months', 'any episode, from SVB-size to 2008-size'],
+  ['severe_24m', 'Severe crisis within 24 months', '1973–75, 1979–82, 2008 or 2020 scale'],
+  ['recession_24m', 'US recession starting within 24 months', 'NBER dates'],
+  ['bear_24m', 'US stocks falling 20%+ within 24 months', 'OECD share-price index'],
+];
+const NOW = new Date().toISOString().slice(0, 19) + 'Z';
+const DESCRIPTION = 'A live 0–100 financial stress index, backtested since 1973: crisis odds, recession probability, inflation, debt and gold from 140+ public data feeds, every 15 minutes.';
+const ld = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: 'Will the system collapse?', description: DESCRIPTION, inLanguage: 'en', publisher: { '@id': `${SITE}/#org` } },
+    { '@type': 'Organization', '@id': `${SITE}/#org`, name: 'Will the system collapse?', url: `${SITE}/`, logo: `${SITE}/apple-touch-icon.png`, sameAs: [REPO] },
+    { '@type': 'WebPage', '@id': `${SITE}/#webpage`, url: `${SITE}/`, name: 'Will the system collapse? Live financial stress index', inLanguage: 'en', isPartOf: { '@id': `${SITE}/#website` }, about: { '@id': `${SITE}/#dataset` }, dateModified: NOW },
+    {
+      '@type': 'Dataset', '@id': `${SITE}/#dataset`, url: `${SITE}/`, name: 'Will the system collapse? Live financial stress score',
+      description: 'A 0–100 score of US and global financial-system stress, refreshed every 15 minutes from 140+ public series (Federal Reserve, FRED, US Treasury, OFR, ECB, IMF, World Bank, exchanges), with its pillars, red flags, a 12-month recession probability and a monthly backtest since 1973.',
+      keywords: ['financial stress index', 'recession probability', 'yield curve', 'systemic risk', 'inflation', 'government debt', 'gold'],
+      license: LICENSE, isAccessibleForFree: true, creator: { '@id': `${SITE}/#org` }, temporalCoverage: '1973-01/..', dateModified: NOW,
+      distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${SITE}/live/collapse.json` }],
+    },
+  ],
+};
+---
+
+<Base
+  title="Will the system collapse? Live financial stress index"
+  description={DESCRIPTION}
+  ld={ld}
+>
+  <Header />
+  <div class="ticker" aria-hidden="true" data-nosnippet><div class="track" id="ticker"></div></div>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <p class="eyebrow"><span class="live-dot"></span> Live monitor · <time id="updated">connecting…</time></p>
+        <h1>Will the system collapse?</h1>
+        <p class="answer-k">Right now</p>
+        <p class="answer" id="answer" data-band="checking" style="--len:9">CHECKING…</p>
+        <p class="lede" id="summary">Reading over 140 public data feeds from central banks, the US Treasury and markets.</p>
+        <div class="flag-strip" id="flag-strip"></div>
+      </div>
+      <div class="hero-side">
+        <div class="card gauge-card">
+          <div class="card-head"><h2 id="gauge-title">System stress score</h2><span class="meta">0–100 · backtested since 1973</span></div>
+          <svg id="gauge" viewBox="0 0 320 190" role="img" aria-label="Gauge of the system stress score">
+            <g id="gauge-bands"></g>
+            <g id="gauge-marks"></g>
+            <g id="needle" class="needle"><line x1="160" y1="160" x2="160" y2="44"></line><rect x="153" y="153" width="14" height="14"></rect></g>
+          </svg>
+          <p class="score"><span id="score">--</span><small>/100</small></p>
+          <p class="band-label" id="band-label">&nbsp;</p>
+        </div>
+        <div class="readouts tiles" id="readouts">
+          <div class="ro card"><b id="ro-acute">--</b><span>Crisis now</span><em>stress + recession warning</em></div>
+          <div class="ro card"><b id="ro-structural">--</b><span>Structural risk</span><em id="ro-record">record</em></div>
+          <div class="ro card"><b id="ro-stag">--</b><span>Stagflation index</span><em>inflation &amp; money + warning</em></div>
+          <div class="ro card"><b id="ro-rec">--</b><span>Recession, 12 months</span><em>yield-curve model</em></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="odds" aria-labelledby="odds-title">
+      <div class="odds-head">
+        <h2 id="odds-title">Will it? What followed months like this one</h2>
+        <p class="muted small" id="odds-note">Every month since 1973 that scored within 3 points of today, and what happened next, against the average month.</p>
+      </div>
+      <div class="odds-grid tiles" id="odds-grid">
+        {ODDS.map(([k, title, note]) => <div class="card odd avg-risk" data-k={k}><p class="ov">--</p><p class="ot">{title}</p><p class="ob"><span>average month --</span><i></i></p><p class="muted tiny">{note}</p></div>)}
+      </div>
+    </section>
+
+    <nav class="subnav" aria-label="Sections">
+      <a href="#pillars-s">Pillars</a>
+      <a href="#flags-s">Red flags</a>
+      <a href="#scale-s">When to worry</a>
+      <a href="#history-s">50 years</a>
+      <a href="#cases-s">Past crises</a>
+      <a href="#forecast-s">Recession model</a>
+      <a href="#lead-s">Before crises</a>
+      <a href="#stag-s">Inflation</a>
+      <a href="#markets-s">Gold markets</a>
+      <a href="#debt-s">Debt</a>
+      <a href="#method-s">Method</a>
+      <a href="#feeds-s">Feeds</a>
+    </nav>
+
+    <section class="section" id="pillars-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">01</span>The four pillars</p><h2 class="section-title">What the score is made of</h2></div>
+        <p class="lede">Each pillar is the average percentile of its inputs against their own history: 90 means worse than 90% of all months on record.</p></header>
+      <div class="pillars" id="pillars"></div>
+    </section>
+
+    <section class="section" id="flags-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">02</span>Right now</p><h2 class="section-title">Red flags, and what's still holding</h2></div>
+        <p class="lede">Every input at the extremes of its own history. A red flag is a reading worse than at least 85% of all months on record.</p></header>
+      <div class="grid-2 flags-grid">
+        <div class="card flagbox"><div class="card-head"><h3>Red flags <span id="flag-count"></span></h3><span class="meta">percentile</span></div><ul id="flags-high" class="flags"></ul></div>
+        <div class="card flagbox"><div class="card-head"><h3>Reassuring</h3><span class="meta">percentile</span></div><ul id="flags-low" class="flags ok"></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="scale-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">03</span>Reading the gauge</p><h2 class="section-title">When should you worry?</h2></div>
+        <p class="lede">Each band comes from the backtest: how often, since 1973, a reading that high came with a crisis already under way or one that began within the following 12 months.</p></header>
+      <div class="card scale-card">
+        <div id="scale" class="scale"></div>
+        <p class="bands-k">Share of months in each band with a crisis under way or starting within a year, or within two</p>
+        <div class="bands tiles" id="bands"></div>
+        <p class="muted small" id="band-note"></p>
+      </div>
+    </section>
+
+    <section class="section" id="history-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">04</span>Backtest · 1973 to today</p><h2 class="section-title">Fifty years of the gauge</h2></div>
+        <p class="lede">What the score would have said at the time, month by month. Each point uses only data available then: percentiles against the history so far, and a recession model refitted every January on outcomes already known.</p></header>
+      <div class="card chart-card">
+        <div class="card-head">
+          <div class="chart-tools" role="group" aria-label="Chart series">
+            <button class="chip on" data-series="score">Score</button>
+            <button class="chip" data-series="acute">Crisis now</button>
+            <button class="chip" data-series="structural">Structural risk</button>
+            <button class="chip" data-series="stagflation">Stagflation index</button>
+            <button class="chip" data-series="recession_risk">Recession probability</button>
+            <button class="chip" data-series="money">Inflation &amp; money</button>
+            <button class="chip" data-series="fiscal">Debt &amp; fragility</button>
+          </div>
+          <p class="legend small muted">
+            <span><span class="key crisis"></span> crisis episodes</span><span><span class="key rec"></span> US recessions (NBER)</span><span><span class="key bear"></span> start of a 20% stock-market fall</span>
+          </p>
+        </div>
+        <div class="chart">
+          <svg id="history" role="img" aria-label="Score history since 1973"></svg>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+      </div>
+      <div class="card"><div class="scorecard" id="scorecard"></div></div>
+    </section>
+
+    <section class="section" id="cases-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">05</span>Concrete examples</p><h2 class="section-title">What it said before, during and after</h2></div>
+        <p class="lede">Ten moments from the last fifty years, scored with only the data that existed at the time.</p></header>
+      <div class="cases tiles" id="case-list"></div>
+    </section>
+
+    <section class="section" id="forecast-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">06</span>The early-warning model</p><h2 class="section-title">Recession probability, next 12 months: <span class="gold" id="fc-prob">--</span></h2></div></header>
+      <div class="grid-3">
+        <div class="card prose-card">
+          <p>
+            The early-warning pillar is a forecasting model built on the two signals with the best record for calling US
+            recessions a year ahead: <strong>the yield curve</strong> and <strong>financial conditions</strong>, plus the
+            credit market's risk appetite.
+          </p>
+          <ul class="ticks">
+            <li><strong>Yield curve.</strong> When 3-month Treasury bills pay more than 10-year bonds, the market expects the Fed to cut because growth is about to weaken. Every US recession since 1969 was preceded by an inversion, usually 6–24 months earlier and often after the curve had started to un-invert, so the model also looks at the deepest inversion of the last 18 months.</li>
+            <li><strong>Financial conditions.</strong> The Chicago Fed's NFCI combines 105 measures of money-market, debt and equity conditions and of bank lending. Tight and tightening conditions starve the economy of credit.</li>
+            <li><strong>Excess bond premium.</strong> The part of corporate bond spreads not explained by default risk: when it rises, lenders are losing their nerve.</li>
+          </ul>
+          <p class="muted small">Logistic regression with a ridge penalty, trained on monthly data since 1971 to answer "does a recession start within 12 months?". Refitted each January using only outcomes already known; backtested out of sample from 1979.</p>
+          <p class="muted small">Why it can read lower than economists’ surveys or betting markets: it counts only what has come before past recessions, and a deep inversion alone isn’t enough while financial conditions and credit spreads stay calm. The <a href="https://www.newyorkfed.org/research/capital_markets/ycfaq" target="_blank" rel="noopener">New York Fed’s model</a> uses the yield curve alone, so the two can differ.</p>
+        </div>
+        <div class="card"><div class="card-head"><h3>Today's inputs</h3><span class="meta">model weights</span></div><table class="mini" id="fc-inputs"></table></div>
+        <div class="card"><div class="card-head"><h3>Out-of-sample track record</h3></div><table class="mini" id="fc-track"></table><p class="small muted" id="fc-note"></p></div>
+      </div>
+    </section>
+
+    <section class="section" id="lead-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">07</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
+        <p class="lede">Every crisis and 20% stock-market fall since 1973, lined up on the month it started. Market gauges stay ordinary until the month trouble hits; the signals that move earlier are in the economy and the credit cycle. None of them can see an overnight crash coming.</p></header>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Average percentile around the start of <span id="lead-n"></span> episodes</h3><span class="meta">50 = an ordinary month</span></div>
+          <svg id="leadchart" role="img" aria-label="How signals behaved before and after past crises"></svg>
+          <p class="legend small muted" id="lead-legend"></p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Pre-crisis checklist</h3><span class="meta">today vs 6 months before past crises</span></div>
+          <table class="mini" id="lead-table"></table>
+          <p class="small muted">AUC: how well a high reading flagged an event starting within 12 months (0.5 = coin flip). We tested these and more inside the score itself: none improved it, because the four pillars already carry their information, so they're shown here as context. The recession probability didn't move either: adding claims, permits, lending standards, unemployment or inflation to its model left its reading between 7% and 9% (tested October 2026) and none improved its out-of-sample record.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="stag-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">08</span>Inflation, the Fed and the worst cases</p><h2 class="section-title">Stagflation, or worse?</h2></div>
+        <p class="lede"><strong>Stagflation</strong> is inflation that stays high while the economy weakens: the 1970s, 1980–82, briefly 1990 and 2008. We define it as inflation of 5% or more while unemployment has risen at least half a point from its 12-month low.</p></header>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-head"><h3>Stagflation index</h3><span class="meta">inflation &amp; money + warning</span></div>
+          <p class="big"><span id="stag-now">--</span><small>/100</small></p>
+          <table class="mini" id="stag-table"></table>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Inflation: official and alternative</h3><span class="meta">percentile</span></div>
+          <table class="mini" id="infl-table"></table>
+          <p class="small muted">
+            What about "real" inflation? The best-known alternative, ShadowStats, is a paid service that doesn't recompute
+            the data: its creator has said it adds a constant to the official figures (<a href="https://econbrowser.com/archives/2008/10/shadowstats_res" target="_blank" rel="noopener">Econbrowser, 2008</a>), and BLS economists have rebutted its claims (<a href="https://www.bls.gov/opub/mlr/2008/08/art1full.pdf" target="_blank" rel="noopener">Monthly Labor Review, 2008</a>).
+            Instead we track the measures Federal Reserve banks build to see through noise. Producer prices and oil show the pressure still in the pipeline.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>The Fed's stance</h3></div>
+          <table class="mini" id="fed-table"></table>
+          <div class="card-head spaced"><h3>Hyperinflation checklist</h3></div>
+          <ul class="checklist" id="hyper"></ul>
+          <p class="small muted">Conditions seen before hyperinflations elsewhere (Germany 1923, Hungary 1946, Zimbabwe 2008, Venezuela 2018). The US has never had one, so this can't be backtested here.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="markets-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">09</span>Same metal, many markets</p><h2 class="section-title">Gold, priced everywhere at once</h2></div>
+        <p class="lede">No government sets the price of gold. It trades around the clock in London, New York, Shanghai, Zurich, Mumbai and on-chain, and arbitrage keeps every venue within a few dollars of the others. When a venue drifts, metal flows to it; a dislocation is an early sign that a market is breaking.</p></header>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Live venues</h3><span class="meta">vs the median</span></div>
+          <div class="tug" id="tug"><div class="lane" id="lane"></div></div>
+          <table class="mini" id="venue-table"></table>
+          <p class="small muted">Tokenised gold (PAXG, XAUT) is backed by allocated London bars and trades 24/7; central-bank references are once-a-day fixes.</p>
+        </div>
+        <div class="card"><div class="card-head"><h3>Gold in ten currencies</h3><span class="meta">1-year change</span></div><table class="mini" id="ccy-table"></table></div>
+      </div>
+    </section>
+
+    <section class="section" id="debt-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">10</span>The fiscal fuse</p><h2 class="section-title">Debt keeps compounding</h2></div></header>
+      <div class="card debt-counter">
+        <p class="eyebrow">US federal debt · live estimate</p>
+        <p class="counter" id="counter">$--</p>
+        <p class="small muted" id="counter-note"></p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>US net foreign debt, % of GDP</h3><span class="meta">net international investment position</span></div>
+          <svg id="niip" role="img" aria-label="US net foreign debt as a share of GDP since 1976"></svg>
+          <p class="small muted" id="niip-note"></p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Gross external debt, % of GDP</h3><span class="meta">bar = 2026 · white line = 2011</span></div>
+          <div id="ext-bars" class="bars"></div>
+          <p class="small muted">World Bank / IMF Quarterly External Debt Statistics (CC BY 4.0). Debt owed abroad by governments, banks and companies. High numbers are normal for financial centres like London and Paris; what matters is the trend.</p>
+        </div>
+        <div class="card"><div class="card-head"><h3 id="gov-title">Government debt, % of GDP</h3><span class="meta">bar = latest · white line = 2007</span></div><div id="gov-bars" class="bars"></div></div>
+        <div class="card">
+          <div class="card-head"><h3>Central-bank gold</h3><span class="meta">tonnes · 12-month change</span></div>
+          <table class="mini" id="cb-table"></table>
+          <p class="small muted">IMF International Liquidity data, monthly, about two months behind.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section method" id="method-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>How it works</p><h2 class="section-title">The method, in plain English</h2></div></header>
+      <div class="steps tiles">
+        <div class="card step">
+          <span class="step-n">1</span><h3>Collect</h3>
+          <p class="muted"><span id="n-series">143</span> public series from the Federal Reserve, FRED, the US Treasury, the OFR, the ECB, the IMF, the World Bank, two central banks and exchange tickers. Every 15 minutes a script refreshes what is due: prices each run, daily data twice a day, monthly data daily, IMF and World Bank data weekly. A due series is re-read in full, some back to 1854, because publishers revise the past.</p>
+        </div>
+        <div class="card step">
+          <span class="step-n">2</span><h3>Compare with history</h3>
+          <p class="muted">A VIX of 30 or a debt ratio of 120% means little on its own. Each measure is turned into a percentile: the share of all past months in which it was lower. 90 means "higher than 90% of history".</p>
+        </div>
+        <div class="card step">
+          <span class="step-n">3</span><h3>Four questions</h3>
+          <p class="muted"><strong>Stress now</strong>: is a crisis happening? <strong>Early warning</strong>: is a recession coming? <strong>Inflation &amp; money</strong>: is money losing value? <strong>Debt &amp; fragility</strong>: how much could break? Inside each pillar, inputs measuring the same thing are averaged first, so no theme is counted twice.</p>
+        </div>
+        <div class="card step">
+          <span class="step-n">4</span><h3>One score, two readings</h3>
+          <p class="muted">Score = (2 × stress + warning + money + fiscal) ÷ 5. Stress counts double because it is the only pillar that says a crisis is actually happening. "Crisis now" = (2 × stress + warning) ÷ 3; "structural risk" = the average of the two slow pillars.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card prose-card"><h3>What it is good at</h3><p class="muted" id="good-at"></p></div>
+        <div class="card prose-card">
+          <h3>What it can't do</h3>
+          <p class="muted">
+            It can't see shocks that come from outside finance, like a pandemic, a war or a sudden crash with no build-up (Black
+            Monday in 1987 barely registered beforehand). The yield curve can cry wolf: its deepest inversion since 1981,
+            in 2022–24, has not been followed by a recession. Debt doesn't time crises at all; it decides how much damage
+            one can do. And a backtest with a dozen crises is a small sample: treat the score as a thermometer with a weather
+            forecast attached, not a prophecy.
+          </p>
+        </div>
+      </div>
+      <div class="card versions">
+        <div class="card-head"><h3>How the formula evolved</h3><span class="meta">v1–v5 October 2026 · each backtested from 1973</span></div>
+        <ol>
+          <li><strong>v1 · Market stress.</strong> Stress indices, credit spreads, VIX, plus a blend of the yield curve, debt and gold. Good at saying a crisis is happening; weak at saying one is coming.</li>
+          <li><strong>v2 · The recession model.</strong> The yield curve and financial conditions became a proper forecasting model, refitted every year on outcomes already known. Recession warning a year ahead improved to an AUC of about 0.9.</li>
+          <li><strong>v3 · Inflation, the Fed and debt.</strong> Added official and alternative inflation, inflation expectations, money growth, the dollar, the deficit, r − g, foreign debt, G7 debt and bond sell-offs, plus unemployment. Tested and rejected for the forecast: the Fed funds rate, its pace of hikes, the real policy rate and the 10-year minus 2-year curve, which added nothing the 10-year minus 3-month curve didn't already know (it is, in effect, the market's read of Fed policy). Debt measures don't time crises at all, so they shape structural risk rather than the warning.</li>
+          <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added stock-market value against GDP (a record 255% at the time) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
+          <li><strong>v5 · Fairer averaging and calibrated labels.</strong> Inputs that measure the same thing are now averaged together first (eight consumer-inflation measures had been outvoting producer prices, expectations and the dollar; four stress indices outvoted the rest), which improved crisis warning a year ahead from 0.73 to 0.75. Bands are now set where the historical odds actually change, and the page shows those odds: the old "calm" label covered months whose odds were average. Tested and rejected: weights fitted by a model (worse out of sample: a dozen crises are too few to fit weights on) and an oil-shock signal (no added power; oil was then just below its three-year high).</li>
+          <li><strong>Research after v5 · signals before crises.</strong> An event study of 20 crisis and crash starts showed market gauges (stress indices, VIX, credit spreads, stock trends) don't move until the month trouble hits; if anything, volatility is unusually low three months before. Building permits, bank lending standards and jobless claims did move earlier and are shown in the pre-crisis checklist, but adding them to the score or the recession model didn't improve either out of sample, so the formula is unchanged.</li>
+        </ol>
+      </div>
+      <p class="muted small">
+        Inspired by the long-gone <a href={ARCHIVE} target="_blank" rel="noopener">didthesystemcollapse.com</a>, which compared
+        London and Shanghai gold prices; its "NOT YET" was a switch flipped by hand. This one is computed. Nothing here is
+        financial advice.
+      </p>
+    </section>
+
+    <section class="section" id="feeds-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">12</span>Data feeds</p><h2 class="section-title">Sources, live status</h2></div>
+        <p class="lede">Everything on this page comes from one public JSON file, rebuilt every 15 minutes: <a href="/live/collapse.json"><code>/live/collapse.json</code></a>. Each series stays under its publisher's terms; our scores are free to reuse under <a href={LICENSE} target="_blank" rel="noopener">CC BY 4.0</a>.</p></header>
+      <pre class="terminal" id="terminal" data-nosnippet>$ connecting to willthesystemcollapse.com/live/collapse.json …</pre>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const BAND_COLORS: Record<string, string> = { calm: '#6fbf8e', normal: '#a9c46c', elevated: '#d9b45a', high: '#e8923a', crisis: '#e05a47', systemic: '#b3261e' };
+  const PILLAR_COPY: Record<string, [string, string]> = {
+    stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown and unemployment.'],
+    warning: ['Early warning', 'Is a recession coming within a year? The yield-curve and financial-conditions model, as a percentile of its own history.'],
+    money: ['Inflation & money', 'Is money losing value? Official and alternative inflation, expectations, money growth, the dollar and gold.'],
+    fiscal: ['Debt & fragility', 'How much could break? Government and corporate debt, deficits, the interest bill, r − g, foreign debt, stock valuations and bond sell-offs.'],
+  };
+  const PILLARS = ['stress', 'warning', 'money', 'fiscal'];
+  const money = (v: number, d = 2) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const num = (v: number, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pctf = (v: number, d = 1) => (v > 0 ? '+' : '') + (100 * v).toFixed(d) + '%';
+  const monthName = (m: string) => new Date(m + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const ago = (iso: string) => {
+    const s = (Date.now() - Date.parse(iso)) / 1000;
+    return s < 90 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`;
+  };
+  const bandOf = (score: number, bands: any[]) => bands.filter((b) => score >= b.at).pop();
+
+  // ---------- gauge ----------
+  function arc(a0: number, a1: number, r: number) {
+    const p = (v: number) => {
+      const t = Math.PI * (1 - v / 100);
+      return `${160 + r * Math.cos(t)} ${160 - r * Math.sin(t)}`;
+    };
+    return `M ${p(a0)} A ${r} ${r} 0 0 1 ${p(a1)}`;
+  }
+  function drawGauge(d: any) {
+    const bands = d.bands;
+    $('gauge-bands').innerHTML = bands
+      .map((b: any, i: number) => `<path d="${arc(b.at, bands[i + 1]?.at ?? 100, 130)}" stroke="${BAND_COLORS[b.key]}" class="gband"/>`)
+      .join('');
+    const marks = d.backtest.crises.filter((c: any) => ['2008', '1973', '2020'].includes(c.start.slice(0, 4)));
+    $('gauge-marks').innerHTML = marks
+      .map((c: any) => {
+        const t = Math.PI * (1 - c.peak / 100);
+        const x = 160 + 150 * Math.cos(t), y = 160 - 150 * Math.sin(t);
+        return `<line x1="${160 + 118 * Math.cos(t)}" y1="${160 - 118 * Math.sin(t)}" x2="${160 + 142 * Math.cos(t)}" y2="${160 - 142 * Math.sin(t)}" class="mark"/><text x="${x}" y="${y}" class="mark-t" text-anchor="middle">${c.start.slice(0, 4)}</text>`;
+      })
+      .join('');
+    ($('needle') as unknown as SVGGElement).style.transform = `rotate(${-90 + (180 * d.score) / 100}deg)`;
+  }
+
+  // ---------- pillars ----------
+  const PILLAR_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', money: '#f0a35e', fiscal: '#c89cf0' };
+  function spark(vals: (number | null)[], color: string) {
+    const v = vals.filter((x) => x != null) as number[];
+    if (v.length < 2) return '';
+    const W = 240, H = 44;
+    const pts = v.map((y, i) => `${((W * i) / (v.length - 1)).toFixed(1)},${(H - (H * y) / 100).toFixed(1)}`);
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,${H} ${pts.join(' ')} ${W},${H}" fill="${color}" opacity=".12"/><polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  function drawPillars(d: any) {
+    const last10 = (k: string) => d.history[k].slice(-120);
+    const open = matchMedia('(min-width: 761px)').matches ? ' open' : '';  // phones start with the input lists folded
+    $('pillars').innerHTML = PILLARS
+      .map((p) => {
+        const [title, text] = PILLAR_COPY[p];
+        const v = d.pillars[p];
+        const col = PILLAR_COLORS[p];
+        const rows =
+          p === 'warning'
+            ? d.forecast.inputs
+                .map((i: any) => `<li><span>${esc(i.label)}</span><b>${i.key === 'nfci' || i.key === 'nfci_chg6' ? i.value.toFixed(2) : (i.value > 0 ? '+' : '') + i.value.toFixed(2) + ' pp'}</b></li>`)
+                .join('') + `<li class="strong"><span>Recession probability, 12 months</span><b>${d.forecast.probability.toFixed(0)}%</b></li>`
+            : d.components
+                .filter((c: any) => c.pillar === p)
+                .sort((a: any, b: any) => b.pct - a.pct)
+                .map((c: any) => `<li title="${esc(c.series)} · ${esc(c.date)}"><span>${esc(c.label)}</span><b>${esc(c.shown)}</b><i style="--p:${c.pct}%"></i><em class="${c.pct >= 85 ? 'hot' : ''}">${c.pct}</em></li>`)
+                .join('');
+        const weight = d.weights[p];
+        const n = p === 'warning' ? d.forecast.inputs.length : d.components.filter((c: any) => c.pillar === p).length;
+        const what = p === 'warning' ? `${n} model inputs` : `${n} inputs · percentile, 100 = worst on record`;
+        return `<article class="card pillar" style="--pc:${col}">
+          <div class="card-head"><h3>${title}</h3><span class="meta">weight ${weight}×</span></div>
+          <p class="pv">${v.toFixed(0)}<small>/100</small></p>
+          <div class="pbar"><i style="width:${v}%"></i></div>
+          ${spark(last10(p), col)}<p class="tiny muted spark-cap">last 10 years</p>
+          <p class="muted small">${text}</p>
+          <details class="inputs"${open}><summary>${what}</summary><ul class="comp">${rows}</ul></details></article>`;
+      })
+      .join('');
+  }
+
+  // ---------- bands ----------
+  function drawBands(d: any) {
+    const bt = d.backtest;
+    const th = Object.fromEntries(bt.thresholds.map((t: any) => [t.at, t]));
+    const top = d.bands[d.bands.length - 1].at;
+    const sys = d.history.months.filter((_: string, i: number) => d.history.score[i] >= top);
+    const years = [...new Set(sys.map((m: string) => m.slice(0, 4)))];
+    // the scale: coloured segments, today's marker and the worst crises
+    const seg = d.bands
+      .map((b: any, i: number) => `<span class="seg" style="--c:${BAND_COLORS[b.key]};flex:${(d.bands[i + 1]?.at ?? 100) - b.at}"><em>${esc(b.label)}</em></span>`)
+      .join('');
+    // labels sorted by position and staggered on two rows, so close peaks (2007 at 82, 1973 at 84) don't overlap
+    const peaks = bt.crises
+      .filter((c: any) => ['1974', '1980', '2007', '2020', '2022'].includes(c.start.slice(0, 4)) || c.start.startsWith('1973'))
+      .sort((a: any, b: any) => a.peak - b.peak)
+      .map((c: any, i: number) => `<span class="peak" style="left:${c.peak}%;--t:${i % 2 ? 20 : 6}px" title="${esc(c.label)}: ${c.peak}">${c.start.slice(0, 4)}</span>`)
+      .join('');
+    $('scale').innerHTML = `<div class="segs">${seg}</div><div class="marks">${peaks}<span class="today" style="left:${d.score}%"><b>${d.score.toFixed(0)}</b>today</span></div>`;
+    $('bands').innerHTML = d.bands
+      .map((b: any, i: number) => {
+        const t = th[b.at];
+        const next = d.bands[i + 1]?.at ?? 100;
+        const inBand = d.odds.bins.filter((x: any) => x.lo >= b.at && x.lo < next);
+        const n = inBand.reduce((a: number, x: any) => a + x.months, 0);
+        const w = (k: string) => n ? Math.round(inBand.reduce((a: number, x: any) => a + x[k] * x.months, 0) / n) : null;
+        const stat = n ? `<span><b>${w('crisis_12m')}%</b> within a year</span><span><b>${w('crisis_24m')}%</b> within two</span><span>${n} months</span>` : '<span>not enough history</span>';
+        const active = d.band.key === b.key ? ' active' : '';
+        return `<div class="bandcard${active}" style="--c:${BAND_COLORS[b.key]}"><span class="range">${b.at}–${next}</span><p class="ans">${esc(b.answer)}</p><p class="bl">${esc(b.label)}</p><p class="st">${stat}</p></div>`;
+      })
+      .join('');
+    $('band-note').textContent = `Bands are set where the historical odds change: below 40, crises were rare; 40–50 is below the average month's odds; from 50 they are above it. On average ${d.odds.crisis_12m.base}% of months were in a crisis or within a year of one, and ${d.odds.crisis_24m.base}% within two years. The score has reached ${top}+ only in ${years.join(', ')}: each time, governments or central banks had to step in to keep the system working.`;
+  }
+
+  // ---------- history chart ----------
+  let chartData: any = null;
+  let series = 'score';
+  const geo = { W: 1000, L: 34, R: 8, n: 1 };  // chart geometry in real pixels, shared with the tooltip
+  function drawHistory() {
+    const d = chartData;
+    const h = d.history;
+    const n = h.months.length;
+    const svg = $('history');
+    const W = Math.max(300, svg.clientWidth), H = svg.clientHeight || 340, L = 34, R = 8, T = 10, B = 26;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    Object.assign(geo, { W, L, R, n });
+    const every = W < 560 ? 10 : 5;
+    const x = (i: number) => L + ((W - L - R) * i) / (n - 1);
+    const y = (v: number) => T + (H - T - B) * (1 - v / 100);
+    const idx = (m: string) => h.months.indexOf(m);
+    let s = '';
+    d.bands.forEach((b: any, i: number) => {
+      const top = d.bands[i + 1]?.at ?? 100;
+      s += `<rect x="${L}" y="${y(top)}" width="${W - L - R}" height="${y(b.at) - y(top)}" fill="${BAND_COLORS[b.key]}" opacity=".07"/>`;
+    });
+    d.backtest.crises.forEach((c: any) => {
+      const a = idx(c.start), b = idx(c.end);
+      if (a >= 0 && b >= 0) s += `<rect x="${x(a)}" y="${T}" width="${Math.max(2, x(b) - x(a))}" height="${H - T - B}" class="crisis"><title>${esc(c.label)}</title></rect>`;
+    });
+    // recessions (from the monthly NBER flags implied by start dates are approximate; draw a strip per recession start → 6+ months)
+    d.events.recessions.forEach((m: string) => {
+      const a = idx(m);
+      if (a >= 0) s += `<rect x="${x(a)}" y="${H - B - 5}" width="${(W - L - R) / n * 8}" height="5" class="rec"/>`;
+    });
+    d.events.bear_markets.forEach((m: string) => {
+      const a = idx(m);
+      if (a >= 0) s += `<path d="M ${x(a)} ${H - B - 9} l -5 -9 h 10 z" class="bear"/>`;
+    });
+    for (let v = 0; v <= 100; v += 25) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L - 6}" y="${y(v) + 4}" class="axis" text-anchor="end">${v}</text>`;
+    h.months.forEach((m: string, i: number) => {
+      if (m.endsWith('-01') && +m.slice(0, 4) % every === 0) s += `<text x="${x(i)}" y="${H - 8}" class="axis" text-anchor="middle">${m.slice(0, 4)}</text>`;
+    });
+    const vals = h[series];
+    let path = '', pen = false;
+    vals.forEach((v: number | null, i: number) => {
+      if (v == null) { pen = false; return; }
+      path += `${pen ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
+      pen = true;
+    });
+    s += `<path d="${path}" class="line ${series}"/>`;
+    const li = vals.length - 1;
+    if (vals[li] != null) s += `<circle cx="${x(li)}" cy="${y(vals[li])}" r="5" class="now"/>`;
+    s += `<line id="cursor" x1="0" x2="0" y1="${T}" y2="${H - B}" class="cursor" visibility="hidden"/>`;
+    $('history').innerHTML = s;
+  }
+  function hookChart() {
+    const svg = $('history');
+    const tip = $('tip');
+    const show = (clientX: number) => {
+      const d = chartData;
+      if (!d) return;
+      const r = svg.getBoundingClientRect();
+      const { W, L, R } = geo;
+      const fx = ((clientX - r.left) / r.width) * W;
+      const n = d.history.months.length;
+      const i = Math.max(0, Math.min(n - 1, Math.round(((fx - L) / (W - L - R)) * (n - 1))));
+      const m = d.history.months[i];
+      const h = d.history;
+      const crisis = d.backtest.crises.find((c: any) => c.start <= m && m <= c.end);
+      const cur = document.getElementById('cursor');
+      const cx = String(geo.L + ((geo.W - geo.L - geo.R) * i) / (n - 1));
+      cur?.setAttribute('x1', cx);
+      cur?.setAttribute('x2', cx);
+      cur?.setAttribute('visibility', 'visible');
+      tip.hidden = false;
+      tip.style.left = Math.min(r.width - 210, Math.max(0, clientX - r.left + 12)) + 'px';
+      tip.innerHTML = `<b>${monthName(m)}</b><br>Score <b>${h.score[i].toFixed(0)}</b> · ${esc(bandOf(h.score[i], d.bands).label)}<br>Crisis now ${h.acute[i].toFixed(0)} · Structural ${h.structural[i].toFixed(0)}<br>Stress ${h.stress[i].toFixed(0)} · Warning ${h.warning[i].toFixed(0)} · Money ${h.money[i].toFixed(0)} · Fiscal ${h.fiscal[i].toFixed(0)}${h.recession_risk[i] != null ? `<br>Recession probability ${h.recession_risk[i].toFixed(0)}%` : ''}${crisis ? `<br><span class="gold">${esc(crisis.label)}</span>` : ''}`;
+    };
+    const hide = () => {
+      tip.hidden = true;
+      document.getElementById('cursor')?.setAttribute('visibility', 'hidden');
+    };
+    svg.addEventListener('mousemove', (e: MouseEvent) => show(e.clientX));
+    svg.addEventListener('mouseleave', hide);
+    // touch: drag a finger along the chart to read it
+    svg.addEventListener('touchstart', (e: TouchEvent) => show(e.touches[0].clientX), { passive: true });
+    svg.addEventListener('touchmove', (e: TouchEvent) => show(e.touches[0].clientX), { passive: true });
+    svg.addEventListener('touchend', () => setTimeout(hide, 2500));
+    let t = 0;
+    addEventListener('resize', () => {
+      clearTimeout(t);
+      t = window.setTimeout(() => chartData && (drawHistory(), drawDebt(chartData), drawLeads(chartData)), 200);
+    });
+    document.querySelectorAll<HTMLButtonElement>('.chip').forEach((b) =>
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+        series = b.dataset.series!;
+        if (chartData) drawHistory();
+      }),
+    );
+  }
+
+  function drawScorecard(d: any) {
+    const t = d.backtest.targets;
+    const cell = (r: any) => `${r.during ?? '—'} / ${r.ahead}`;
+    const row = (k: string, name: string) =>
+      `<tr><th>${name}</th><td>${t[k].events}</td><td>${cell(t[k].score)}</td><td>${cell(t[k].acute)}</td><td>${cell(t[k].structural)}</td><td>${cell(t[k].stagflation)}</td><td>${cell(t[k].model)}</td></tr>`;
+    $('scorecard').innerHTML = `<table class="mini wide"><caption class="label">AUC during the event / in the 12 months before it (0.5 = coin flip, 1.0 = perfect)</caption>
+      <thead><tr><th></th><th>Events</th><th>Score</th><th>Crisis now</th><th>Structural</th><th>Stagflation index</th><th>Recession model</th></tr></thead>
+      <tbody>${row('recession', 'US recessions (NBER)')}${row('crisis', 'Crisis episodes (our list)')}${row('bear', 'US stocks fall 20%+')}${row('stagflation', 'Stagflation episodes')}</tbody></table>
+      <div><p class="label">Each crisis: highest score in the 12 months before → during</p><div class="crisis-grid tiles">
+      ${d.backtest.crises.map((c: any) => `<div class="cg" style="--c:${BAND_COLORS[bandOf(c.peak, d.bands).key]}"><span class="cg-m">${monthName(c.start)}</span><span class="cg-l">${esc(c.label)}</span><span class="cg-v"><em style="color:${BAND_COLORS[bandOf(c.before, d.bands).key]}">${c.before}</em> → <b>${c.peak}</b></span></div>`).join('')}
+      </div></div>`;
+  }
+
+  function drawCases(d: any) {
+    $('case-list').innerHTML = d.cases
+      .map((c: any) => {
+        const col = BAND_COLORS[bandOf(c.score, d.bands).key];
+        const m = (k: string, label: string) => `<div><dt>${label}</dt><dd>${c[k]}</dd><i style="--w:${c[k]}%"></i></div>`;
+        return `<article class="case card" style="--c:${col}">
+          <div class="case-top"><p class="label">${monthName(c.month)}</p><p class="cscore"><b>${c.score}</b><span>${esc(c.band)}</span></p></div>
+          <h3>${esc(c.title)}</h3><p class="muted small">${esc(c.text)}</p>
+          <dl>${m('acute', 'Crisis now')}${m('structural', 'Structural')}${m('stress', 'Stress')}${m('warning', 'Warning')}${m('money', 'Money')}${m('fiscal', 'Fiscal')}</dl>
+          <p class="rp">${c.recession_risk != null ? `Recession probability <b>${c.recession_risk}%</b>` : 'Before the recession model had enough history'}</p></article>`;
+      })
+      .join('');
+  }
+
+  function drawForecast(d: any) {
+    const f = d.forecast;
+    $('fc-prob').textContent = f.probability.toFixed(0) + '%';
+    $('fc-inputs').innerHTML = f.inputs
+      .map((i: any) => `<tr><th>${esc(i.label)}</th><td>${i.value.toFixed(2)}</td><td class="muted">${i.weight > 0 ? 'higher = more risk' : 'lower = more risk'}</td></tr>`)
+      .join('');
+    const tr = f.track;
+    $('fc-track').innerHTML =
+      `<thead><tr><th>Model said</th><th>Recession began within 12 months</th><th>Months</th></tr></thead><tbody>` +
+      tr.buckets.map((b: any) => `<tr><th>${b.lo}–${b.hi}%</th><td>${b.hit ?? '—'}%</td><td>${b.months}</td></tr>`).join('') +
+      `<tr class="sub"><th>Recession</th><th>Highest probability in the year before</th><th>When</th></tr>` +
+      tr.recessions.map((r: any) => `<tr><th>${monthName(r.start)}</th><td>${r.peak_before}%</td><td>${r.peak_month ? monthName(r.peak_month) : '—'}</td></tr>`).join('') + '</tbody>';
+    $('fc-note').textContent = `Out-of-sample AUC ${tr.auc} since ${tr.since.slice(0, 4)}. Its high readings in 2022–24 were a false alarm, at least so far: the deepest inversion since 1981 was followed by a soft landing.`;
+  }
+
+  // ---------- markets ----------
+  function drawVenues(d: any) {
+    const m = d.markets;
+    const live = m.venues.filter((v: any) => v.kind === 'token').sort((a: any, b: any) => a.price - b.price);
+    const med = m.gold.price;
+    $('venue-table').innerHTML = m.venues
+      .map((v: any) => {
+        const bps = ((v.price / med - 1) * 10000).toFixed(0);
+        return `<tr><th>${esc(v.name)}</th><td>${money(v.price)}</td><td class="${+bps > 0 ? 'up' : +bps < 0 ? 'down' : 'muted'}">${+bps > 0 ? '+' : ''}${bps} bp</td><td class="muted">${v.kind === 'token' ? ago(v.at) : v.at}</td></tr>`;
+      })
+      .join('');
+    if (live.length > 1) {
+      const sp = m.spread;
+      $('tug').dataset.cheap = live[0].name;
+      $('tug').dataset.dear = live[live.length - 1].name;
+      $('tug').style.setProperty('--speed', `${Math.max(1.2, 6 - sp.pct * 20)}s`);
+      $('tug').setAttribute('data-label', `Spread ${money(sp.usd)} (${sp.pct.toFixed(2)}%) · metal flows to the dearer venue`);
+      if (!$('lane').children.length) $('lane').innerHTML = Array.from({ length: 6 }, (_, i) => `<span style="animation-delay:${-i}s"></span>`).join('');
+    }
+    $('ccy-table').innerHTML = m.currencies
+      .map((c: any) => `<tr><th>${c.ccy}</th><td>${c.price.toLocaleString('en-US', { maximumFractionDigits: c.price > 1000 ? 0 : 2 })}</td><td class="${c.change_1y >= 0 ? 'up' : 'down'}">${pctf(c.change_1y)}</td></tr>`)
+      .join('');
+  }
+
+  let debtTimer = 0;
+  function drawDebt(d: any) {
+    const m = d.markets;
+    const base = Date.parse(m.us_debt.date + 'T23:59:59Z');
+    cancelAnimationFrame(debtTimer);
+    const tick = () => {
+      const v = m.us_debt.total + m.us_debt.per_second * ((Date.now() - base) / 1000);
+      $('counter').textContent = '$' + Math.round(v).toLocaleString('en-US');
+      debtTimer = requestAnimationFrame(tick);
+    };
+    tick();
+    $('counter-note').textContent = `Last official figure ${money(m.us_debt.total / 1e12, 2)} trillion on ${m.us_debt.date} (Treasury, Debt to the Penny); counting at the last 12 months' pace of ${money(m.us_debt.per_second, 0)} per second. ${m.us_debt.gdp_pct.toFixed(0)}% of GDP.`;
+    const g = m.government_debt;
+    $('gov-title').textContent = `Government debt, % of GDP, ${g.year} (IMF) vs 2007`;
+    const max = Math.max(...g.countries.map((c: any) => Math.max(c.pct, c.in_2007 ?? 0)));
+    $('gov-bars').innerHTML = g.countries
+      .map((c: any) => `<div class="gbar"><span>${esc(c.country)}</span><div><i style="width:${(100 * c.pct) / max}%"></i>${c.in_2007 ? `<u style="left:${(100 * c.in_2007) / max}%" title="2007: ${c.in_2007}%"></u>` : ''}</div><b>${c.pct.toFixed(0)}%</b></div>`)
+      .join('');
+    const ext = m.external_debt;
+    const emax = Math.max(...ext.map((c: any) => Math.max(c.pct, c.pct_2011 ?? 0)));  // scale covers the 2011 markers too (UK was 352% then)
+    $('ext-bars').innerHTML = ext
+      .map((c: any) => `<div class="gbar"><span>${esc(c.country)}</span><div><i style="width:${(100 * c.pct) / emax}%"></i>${c.pct_2011 ? `<u style="left:${(100 * c.pct_2011) / emax}%" title="2011: ${c.pct_2011}%"></u>` : ''}</div><b>${c.pct}%</b></div>`)
+      .join('');
+    const nh = m.niip_history;
+    if (nh.length) {
+      const svgN = $('niip');
+      const W = Math.max(280, svgN.clientWidth), H = svgN.clientHeight || 220, L = 30, B = 22, T = 8;
+      svgN.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      const vmax = Math.max(...nh.map((p: any) => p[1])) * 1.1, vmin = Math.min(0, ...nh.map((p: any) => p[1]));
+      const t0 = Date.parse(nh[0][0] + '-01'), t1 = Date.parse(nh[nh.length - 1][0] + '-01');
+      const x = (m: string) => L + ((W - L - 6) * (Date.parse(m + '-01') - t0)) / (t1 - t0);
+      const y = (v: number) => T + (H - T - B) * (1 - (v - vmin) / (vmax - vmin));
+      let g = '';
+      for (let v = 0; v <= vmax; v += 20) g += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L - 4}" y="${y(v) + 4}" class="axis" text-anchor="end">${v}</text>`;
+      ['1980', '1990', '2000', '2010', '2020'].forEach((yr) => (g += `<text x="${x(yr + '-01')}" y="${H - 6}" class="axis" text-anchor="middle">${yr}</text>`));
+      g += `<path d="M ${nh.map((p: any) => `${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(' L ')} L ${x(nh[nh.length - 1][0])} ${y(0)} L ${x(nh[0][0])} ${y(0)} Z" class="area"/>`;
+      g += `<path d="M ${nh.map((p: any) => `${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(' L ')}" class="line"/>`;
+      $('niip').innerHTML = g;
+      const v11 = nh.find((p: any) => p[0] >= '2011-01')?.[1];
+      $('niip-note').textContent = `What the US owes the rest of the world minus what it owns abroad: ${nh[nh.length - 1][1]}% of GDP (${nh[nh.length - 1][0]}), up from ${v11}% in 2011. In 1976 the US was a net creditor. Source: BEA via FRED.`;
+    }
+    $('cb-table').innerHTML = m.central_banks
+      .slice()
+      .sort((a: any, b: any) => b.tonnes - a.tonnes)
+      .map((c: any) => `<tr><th>${esc(c.country)}</th><td>${c.tonnes.toLocaleString('en-US')} t</td><td class="${c.change_12m > 0 ? 'up' : c.change_12m < 0 ? 'down' : 'muted'}">${c.change_12m > 0 ? '+' : ''}${c.change_12m} t / 12 m</td></tr>`)
+      .join('');
+  }
+
+  function drawTicker(d: any) {
+    const m = d.markets;
+    const items = [
+      ['GOLD', money(m.gold.price)],
+      ['SILVER', money(m.gold.silver)],
+      ['GOLD/SILVER', num(m.gold.gold_silver, 1)],
+      ['BTC', money(m.btc.price, 0)],
+      ['BTC IN GOLD', num(m.btc.in_gold_oz, 1) + ' oz'],
+      ['US 10Y', num(m.yields.us10) + '%'],
+      ['US 2Y', num(m.yields.us2) + '%'],
+      ['10Y REAL', num(m.yields.us10_real) + '%'],
+      ['VIX', num(m.vix, 1)],
+      ['US DEBT', money(m.us_debt.total / 1e12, 2) + 'T'],
+      ['SCORE', d.score.toFixed(1)],
+      ['CRISIS NOW', d.acute.toFixed(0)],
+      ['STRUCTURAL', d.structural.toFixed(0)],
+      ['FED FUNDS', num(m.fed.rate) + '%'],
+      ['RECESSION 12M', d.forecast.probability.toFixed(0) + '%'],
+    ];
+    const html = items.map(([k, v]) => `<span><em>${k}</em> ${v}</span>`).join('');
+    $('ticker').innerHTML = html + html;
+  }
+
+  function drawTerminal(d: any) {
+    const lines = d.sources.map((s: any) => {
+      const ok = s.ok ? '<b class="ok">[ ok ]</b>' : '<b class="err">[fail]</b>';
+      const when = s.fetched ? new Date(s.fetched * 1000).toISOString().slice(0, 16).replace('T', ' ') : '—';
+      return `${ok} ${when}  ${esc(s.key.padEnd(16))} last ${esc((s.last ?? '—').slice(0, 10))}  ${esc(s.label)} <span class="muted">· ${esc(s.source)}</span>`;
+    });
+    $('terminal').innerHTML = `$ collect --all  # ${d.sources.filter((s: any) => s.ok).length}/${d.sources.length} feeds healthy, score computed ${d.updated}\n` + lines.join('\n');
+  }
+
+  function drawOdds(d: any) {
+    const o = d.odds;
+    // the cards and their labels are in the page; fill the numbers
+    document.querySelectorAll<HTMLElement>('#odds-grid [data-k]').forEach((c) => {
+      const x = o[c.dataset.k!];
+      c.style.display = x.like == null ? 'none' : '';
+      if (x.like == null) return;
+      const diff = x.like - x.base;
+      c.classList.remove('up-risk', 'down-risk', 'avg-risk');
+      c.classList.add(diff >= 10 ? 'up-risk' : diff <= -10 ? 'down-risk' : 'avg-risk');
+      c.querySelector('.ov')!.textContent = `${x.like}%`;
+      c.querySelector('.ob span')!.textContent = `average month ${x.base}%`;
+      c.querySelector('.ob i')!.textContent = `${diff > 0 ? '+' : ''}${diff} pts`;
+    });
+    $('odds-note').textContent = `All ${o.crisis_12m.months} months since 1973 that scored within 3 points of today (${d.score.toFixed(0)}), and what happened next, against the average month. History, not a forecast.`;
+  }
+
+  const LEAD_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', permits: '#d9b45a', lending: '#c89cf0', claims: '#6fbf8e', vix_rise: '#9c9584' };
+  function drawLeads(d: any) {
+    const L = d.leads;
+    $('lead-n').textContent = String(L.events);
+    const svg = $('leadchart');
+    const Wd = Math.max(300, svg.clientWidth), Ht = svg.clientHeight || 280, l = 30, r = 8, t = 10, b = 24;
+    svg.setAttribute('viewBox', `0 0 ${Wd} ${Ht}`);
+    const n = L.lags.length;
+    const x = (i: number) => l + ((Wd - l - r) * i) / (n - 1);
+    const y = (v: number) => t + (Ht - t - b) * (1 - v / 100);
+    let g = '';
+    for (let v = 0; v <= 100; v += 25) g += `<line x1="${l}" x2="${Wd - r}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${l - 4}" y="${y(v) + 4}" class="axis" text-anchor="end">${v}</text>`;
+    g += `<line x1="${l}" x2="${Wd - r}" y1="${y(50)}" y2="${y(50)}" class="mid"/>`;
+    const i0 = L.lags.indexOf(0);
+    g += `<line x1="${x(i0)}" x2="${x(i0)}" y1="${t}" y2="${Ht - b}" class="start"/><text x="${x(i0) + 4}" y="${t + 10}" class="axis">crisis starts</text>`;
+    L.lags.forEach((lag: number, i: number) => { if (lag % 6 === 0) g += `<text x="${x(i)}" y="${Ht - 6}" class="axis" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}">${lag > 0 ? '+' : ''}${lag}m</text>`; });
+    Object.entries(L.study).forEach(([k, vals]: [string, any]) => {
+      const pts = vals.map((v: number | null, i: number) => (v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`)).filter(Boolean);
+      g += `<polyline points="${pts.join(' ')}" fill="none" stroke="${LEAD_COLORS[k]}" stroke-width="${k === 'stress' || k === 'warning' ? 2.4 : 1.6}" ${k === 'vix_rise' ? 'stroke-dasharray="4 4"' : ''}/>`;
+    });
+    svg.innerHTML = g;
+    $('lead-legend').innerHTML = Object.keys(L.study).map((k) => `<span><span class="key" style="background:${LEAD_COLORS[k]}"></span> ${esc(L.labels[k])}</span>`).join('');
+    $('lead-table').innerHTML = `<thead><tr><th></th><th>Today</th><th>6m before</th><th>AUC crisis · fall · recession</th></tr></thead><tbody>` +
+      L.checklist.map((c: any) => `<tr><th>${esc(c.label)}</th><td class="${c.now >= c.before6 ? 'down' : 'up'}">${c.now}</td><td>${c.before6 ?? '—'}</td><td>${c.auc.crisis ?? '—'} · ${c.auc.bear ?? '—'} · ${c.auc.recession ?? '—'}</td></tr>`).join('') + '</tbody>';
+  }
+
+  function drawFlags(d: any) {
+    const li = (f: any) => `<li><span>${esc(f.label)}</span><b>${esc(f.shown)}</b><em>${f.pct}</em></li>`;
+    $('flags-high').innerHTML = d.flags.high.map(li).join('') || '<li class="muted">None</li>';
+    $('flags-low').innerHTML = d.flags.low.map(li).join('') || '<li class="muted">None</li>';
+    $('flag-count').textContent = `· ${d.flags.high.length}`;
+    const o = d.markets.oil;
+    if (o.pct >= 85) $('flags-high').innerHTML += `<li><span>Oil (WTI), 12-month change · watch item, not scored</span><b>${pctf(o.change_1y, 0)}</b><em>${o.pct}</em></li>`;
+  }
+
+  function drawInflation(d: any) {
+    const c = Object.fromEntries(d.components.map((x: any) => [x.key, x]));
+    $('stag-now').textContent = d.stagflation.toFixed(0);
+    const sd = d.stagflation_detail;
+    $('stag-table').innerHTML =
+      `<thead><tr><th>Index at least</th><th>In stagflation or within a year of it</th><th>Months</th></tr></thead><tbody>` +
+      sd.thresholds.map((t: any) => `<tr><th>${t.at}</th><td>${t.near ?? '—'}%</td><td>${t.months}</td></tr>`).join('') +
+      `<tr><th>Now</th><td colspan="2" class="muted">inflation ${sd.inflation.toFixed(1)}%, unemployment ${sd.unemployment_rise >= 0 ? '+' : ''}${sd.unemployment_rise.toFixed(1)} pp vs its 12-month low</td></tr></tbody>`;
+    const rows = ['cpi', 'core_cpi', 'pce', 'sticky', 'median', 'trim_cpi', 'trim_pce', 'mct', 'ppi', 'exp5y5y', 'exp10', 'm2'].filter((k) => c[k]);
+    const o = d.markets.oil, hp = d.markets.house_prices;
+    $('infl-table').innerHTML = rows.map((k) => `<tr><th>${esc(c[k].label)}</th><td>${esc(c[k].shown)}</td><td class="muted">pct ${c[k].pct}</td></tr>`).join('') +
+      `<tr><th>Oil (WTI), 12-month change</th><td>${pctf(o.change_1y, 0)}</td><td class="muted">pct ${o.pct} · $${o.price.toFixed(0)}</td></tr>` +
+      `<tr><th>House prices (FHFA), 12 months</th><td>${pctf(hp.change_1y)}</td><td class="muted">${esc(hp.date.slice(0, 7))}</td></tr>`;
+    const f = d.markets.fed;
+    $('fed-table').innerHTML = `<tr><th>Fed funds rate</th><td>${f.rate.toFixed(2)}%</td><td class="muted">a year ago ${f.rate_1y_ago.toFixed(2)}%</td></tr>
+      <tr><th>Real policy rate (minus CPI inflation)</th><td>${f.real_rate >= 0 ? '+' : ''}${f.real_rate.toFixed(2)} pp</td><td class="muted">${f.real_rate > 1 ? 'restrictive' : f.real_rate < 0 ? 'loose' : 'roughly neutral'}</td></tr>
+      <tr><th>Balance sheet</th><td>${money(f.balance_sheet / 1e6, 2)}T</td><td class="muted">${pctf(f.balance_sheet_change_1y)} in a year</td></tr>`;
+    $('hyper').innerHTML = d.hyperinflation
+      .map((h: any) => `<li class="${h.met ? 'met' : ''}"><b>${h.met ? '■' : '□'}</b><span>${esc(h.label)}</span><em>${h.threshold == null ? esc(h.note) : `now ${h.value.toFixed(1)}% · line ${h.threshold}%`}</em></li>`)
+      .join('');
+  }
+
+  function render(d: any) {
+    const answer = $('answer');
+    answer.textContent = d.band.answer + (d.band.answer.endsWith('.') ? '' : '.');
+    answer.dataset.band = d.band.key;
+    answer.style.setProperty('--len', String(answer.textContent.length));  // "WOBBLING." must fit a phone as well as "NO."
+    $('n-series').textContent = String(d.sources.length);
+    document.documentElement.style.setProperty('--band', BAND_COLORS[d.band.key]);
+    $('score').textContent = d.score.toFixed(1);
+    $('band-label').textContent = d.band.label;
+    $('pill-text').textContent = `${d.score.toFixed(0)} · ${d.band.label}`;
+    $('updated').textContent = 'updated ' + ago(d.updated);
+    const sr = d.structural_rank;
+    if (d.summary) $('summary').textContent = d.summary; // written by collect.py, which also bakes it into the page
+    const ro = (id: string, v: number) => { $(id).textContent = v.toFixed(0); $(id).style.color = BAND_COLORS[bandOf(v, d.bands).key]; };
+    $('flag-strip').innerHTML = d.flags.high.slice(0, 5).map((f: any) => `<a class="fchip" href="#flags-s"><i></i>${esc(f.label)} <b>${esc(f.shown)}</b></a>`).join('') +
+      (d.flags.high.length > 5 ? `<a class="fchip more" href="#flags-s">+${d.flags.high.length - 5} more</a>` : '');
+    ro('ro-acute', d.acute);
+    ro('ro-structural', d.structural);
+    ro('ro-stag', d.stagflation);
+    $('ro-rec').textContent = `${d.forecast.probability.toFixed(0)}%`;
+    $('ro-record').textContent = `record ${sr.max.toFixed(0)}, ${monthName(sr.max_month)}`;
+    const t = d.backtest.targets;
+    $('good-at').textContent = `Telling calm from crisis. During US recessions the score ran higher than in normal months (AUC ${t.recession.score.during}); a year before them it was already elevated (AUC ${t.recession.score.ahead}), and the recession model alone scored ${d.forecast.track.auc} out of sample. The stagflation index flagged stagflation a year ahead with an AUC of ${t.stagflation.stagflation.ahead}. Of all months scoring 70 or more since 1973, ${d.backtest.thresholds.find((x: any) => x.at === 70)?.near}% were inside a crisis or within a year of one.`;
+    drawGauge(d);
+    drawPillars(d);
+    drawBands(d);
+    chartData = d;
+    drawHistory();
+    drawScorecard(d);
+    drawCases(d);
+    drawForecast(d);
+    drawFlags(d);
+    drawOdds(d);
+    drawLeads(d);
+    drawInflation(d);
+    drawVenues(d);
+    drawDebt(d);
+    drawTicker(d);
+    drawTerminal(d);
+  }
+
+  let last = '';
+  async function load() {
+    try {
+      const r = await fetch('/live/collapse.json', { cache: 'no-cache' });
+      if (!r.ok) throw new Error(String(r.status));
+      const d = await r.json();
+      if (d.updated !== last) {
+        last = d.updated;
+        render(d);
+      } else {
+        $('updated').textContent = 'updated ' + ago(d.updated);
+      }
+      // the cron job refreshes every 15 minutes; say so if the data has gone stale
+      const stale = Date.now() - Date.parse(d.updated) > 2 * 3600 * 1000;
+      $('updated').classList.toggle('stale', stale);
+      if (stale) $('updated').textContent = `data delayed · last update ${ago(d.updated)}`;
+    } catch (e) {
+      if (!last) {
+        $('answer').textContent = 'CONN_ERR';
+        $('answer').dataset.band = 'error';
+        $('updated').textContent = 'data feed unavailable, retrying';
+      }
+    }
+  }
+  hookChart();
+  // highlight the section in view in the sticky section bar
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.subnav a')];
+  const spy = new IntersectionObserver(
+    (entries) => entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      links.forEach((a) => a.classList.toggle('on', a.hash === '#' + e.target.id));
+      const on = links.find((a) => a.classList.contains('on'));
+      const bar = on?.parentElement;
+      if (on && bar) bar.scrollTo({ left: on.offsetLeft - bar.clientWidth / 2 + on.clientWidth / 2, behavior: 'smooth' });
+    }),
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  document.querySelectorAll('main section[id]').forEach((sec) => spy.observe(sec));
+  load();
+  setInterval(() => document.visibilityState === 'visible' && load(), 60_000);
+</script>
+
+<style>
+  html { scroll-padding-top: calc(var(--top) + 52px); }
+
+
+  :global(.up) { color: #6fbf8e; }
+  :global(.down) { color: #e05a47; }
+  :global(.ok) { color: #6fbf8e; }
+  :global(.err) { color: #e05a47; }
+
+  .grid-2, .grid-3 { display: grid; gap: clamp(12px, 1.2vw, 16px); align-items: start; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .flags-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  @media (max-width: 1200px) { .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-3 > :first-child { grid-column: 1 / -1; } }
+  @media (max-width: 860px) { .grid-2, .grid-3, .flags-grid { grid-template-columns: 1fr; } }
+
+
+  /* ticker (fixed height: it fills only once the data has loaded) */
+  .ticker { height: 31px; overflow: hidden; border-bottom: 1px solid var(--rule); background: #08080a; font: 500 0.76rem/1 var(--mono); }
+  .track { display: inline-flex; gap: 32px; padding: 9px 0; white-space: nowrap; animation: scroll 70s linear infinite; }
+  .track :global(em) { font-style: normal; color: var(--muted); margin-right: 6px; }
+  @keyframes scroll { to { transform: translateX(-50%); } }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 48px); align-items: center; padding-block: clamp(24px, 3.5vw, 52px) clamp(20px, 2.5vw, 36px); }
+  .hero-main { display: grid; gap: 12px; justify-items: start; }
+  .hero h1 { font-size: clamp(2rem, 3.4vw, 3.3rem); letter-spacing: -0.035em; line-height: 1.02; }
+  .live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 8px; vertical-align: 1px; background: #6fbf8e; animation: pulse 2s infinite; }
+  .answer-k { font: 600 0.72rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 6px 0 -4px; }
+  /* sized by length (--len, set by the script) so the longest answer still fits one line */
+  .answer { font: 700 clamp(3rem, min(var(--fs, 8vw), 130vw / var(--len, 4)), 8.4rem)/0.86 var(--display); letter-spacing: -0.035em; color: var(--band); text-shadow: 0 0 80px color-mix(in srgb, var(--band) 30%, transparent); transition: color 0.6s; }
+  .answer[data-band='checking'] { color: var(--muted); font-size: clamp(2.2rem, 6vw, 4.4rem); letter-spacing: -0.03em; animation: blink 1.2s steps(2) infinite; }
+  .answer[data-band='error'] { color: #e05a47; font-family: var(--mono); font-size: clamp(2.2rem, 6vw, 4.4rem); letter-spacing: 0; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  .hero .lede { max-width: 64ch; }
+  .flag-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  :global(.fchip) { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 10px; font-size: 0.76rem; line-height: 1.3; white-space: nowrap; text-decoration: none; color: var(--ink); background: rgba(224, 90, 71, 0.08); border: 1px solid rgba(224, 90, 71, 0.28); }
+  :global(.fchip i) { align-self: center; width: 6px; height: 6px; background: #e05a47; }
+  :global(.fchip b) { font: 600 0.74rem var(--mono); color: #f08a78; }
+  :global(.fchip.more) { background: transparent; border-color: var(--rule); color: var(--muted); }
+  .hero-side { display: grid; }
+  .gauge-card { text-align: center; padding-bottom: 16px !important; }
+  #gauge { width: 100%; max-width: 340px; margin: -4px auto 0; overflow: visible; display: block; }
+  :global(.gband) { fill: none; stroke-width: 16; }
+  :global(.mark) { stroke: var(--ink); stroke-width: 1.5; opacity: 0.6; }
+  :global(.mark-t) { fill: var(--muted); font: 600 10px var(--mono); }
+  .needle { transform-origin: 160px 160px; transform: rotate(-90deg); transition: transform 1.6s cubic-bezier(0.2, 1.4, 0.4, 1); }
+  .needle line { stroke: var(--ink); stroke-width: 3; }
+  .needle rect { fill: var(--band); }
+  .score { font: 600 3rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-top: -6px; color: var(--band); }
+  .score small { font-size: 0.95rem; letter-spacing: 0; color: var(--muted); }
+  .band-label { font: 600 0.76rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; margin-top: 6px; }
+  .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 0; }
+  :global(.ro) { display: grid; gap: 3px; align-content: start; padding: 12px 14px !important; }
+  :global(.ro b) { font: 600 1.6rem/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  :global(.ro span) { font-weight: 600; font-size: 0.8rem; line-height: 1.3; }
+  :global(.ro em) { font-style: normal; font-size: 0.7rem; line-height: 1.35; color: var(--muted); }
+  @media (max-width: 1100px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-left: 0; }
+  }
+
+  /* odds strip */
+  .odds { display: grid; gap: 12px; padding-bottom: clamp(24px, 3vw, 40px); }
+  .odds-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 24px; flex-wrap: wrap; }
+  .odds-head h2 { font-size: clamp(1.05rem, 1.5vw, 1.3rem); }
+  .odds-head p { max-width: 80ch; }
+  .odds-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 1200px) { .odds-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  :global(.odd) { display: grid; gap: 4px; align-content: start; padding: 14px 16px !important; }
+  :global(.odd .ov) { font: 600 1.9rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  :global(.odd .ot) { font-weight: 600; font-size: 0.84rem; line-height: 1.3; }
+  :global(.odd .ob) { display: flex; justify-content: space-between; gap: 8px; font: 0.72rem var(--mono); color: var(--muted); }
+  :global(.odd .ob i) { font-style: normal; }
+  :global(.odd.up-risk .ov), :global(.odd.up-risk .ob i) { color: #e8923a; }
+  :global(.odd.down-risk .ov), :global(.odd.down-risk .ob i) { color: #6fbf8e; }
+  :global(.odd.avg-risk .ov) { color: var(--ink); }
+
+  /* section bar */
+  .subnav { position: sticky; top: var(--top); z-index: 20; display: flex; margin-inline: calc(-1 * var(--gutter)); padding: 0 var(--gutter); overflow-x: auto; scrollbar-width: none; background: rgba(11, 11, 14, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-block: 1px solid var(--rule); }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subnav a { flex: none; padding: 12px 12px 11px; font-size: 0.8rem; color: var(--muted); text-decoration: none; white-space: nowrap; box-shadow: inset 0 -2px 0 transparent; transition: color 0.2s, box-shadow 0.2s; }
+  .subnav a:hover { color: var(--ink); }
+  .subnav a.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--gold); }
+
+  #pillars-s { border-top: 0; }
+
+  /* pillars */
+  .pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(12px, 1.2vw, 16px); align-items: start; }
+  @media (max-width: 1400px) { .pillars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .pillars { grid-template-columns: 1fr; } }
+  :global(.pillar) { border-top: 2px solid var(--pc) !important; }
+  :global(.pv) { font: 600 2.6rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--pc); }
+  :global(.pv small) { font-size: 0.85rem; letter-spacing: 0; color: var(--muted); }
+  :global(.pbar) { height: 4px; margin: 10px 0 8px; background: var(--rule); overflow: hidden; }
+  :global(.pbar i) { display: block; height: 100%; background: var(--pc); transition: width 1.2s; }
+  :global(.spark) { width: 100%; height: 36px; display: block; }
+  :global(.spark-cap) { margin: 2px 0 8px; text-align: right; }
+  :global(.inputs) { margin-top: 12px; border-top: 1px solid var(--rule); }
+  :global(.inputs summary) { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0 4px; cursor: pointer; list-style: none; font: 500 0.7rem var(--mono); color: var(--muted); }
+  :global(.inputs summary::-webkit-details-marker) { display: none; }
+  :global(.inputs summary::after) { content: '+'; color: var(--ink); }
+  :global(.inputs[open] summary::after) { content: '−'; }
+  :global(.inputs summary:hover) { color: var(--ink); }
+  :global(.comp) { list-style: none; padding: 0; margin: 0; display: grid; font-size: 0.8rem; }
+  :global(.comp li) { display: grid; grid-template-columns: minmax(0, 1fr) auto 40px 24px; gap: 8px; align-items: center; padding: 5px 0; line-height: 1.35; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+  :global(.comp li:last-child) { border-bottom: 0; }
+  :global(.comp li.strong) { grid-template-columns: 1fr auto; color: var(--gold); padding-top: 8px; }
+  :global(.comp b) { max-width: 8em; font: 600 0.78rem var(--mono); text-align: right; }
+  :global(.comp i) { height: 3px; background: linear-gradient(90deg, var(--pc, var(--gold)) var(--p), var(--rule) var(--p)); }
+  :global(.comp em) { font: 0.72rem var(--mono); font-style: normal; text-align: right; color: var(--muted); }
+  :global(.comp em.hot) { color: #f08a78; }
+
+  /* flags */
+  .flags { list-style: none; margin: 0; padding: 0; display: grid; font-size: 0.86rem; }
+  :global(.flags li) { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; gap: 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+  :global(.flags li:last-child) { border-bottom: 0; }
+  :global(.flags b) { font: 600 0.82rem var(--mono); color: #f08a78; }
+  :global(.flags.ok b) { color: #6fbf8e; }
+  :global(.flags em) { font: 0.72rem var(--mono); font-style: normal; text-align: right; color: var(--muted); }
+  :global(.flags li span), :global(.checklist span) { min-width: 0; overflow-wrap: anywhere; }
+
+  /* scale + bands */
+  .scale { margin: 40px 0 4px; }
+  :global(.segs) { display: flex; height: 30px; }
+  :global(.seg) { display: flex; align-items: center; justify-content: center; min-width: 0; background: color-mix(in srgb, var(--c) 26%, var(--surface)); border-right: 1px solid var(--bg); }
+  :global(.seg em) { padding-inline: 4px; font: 600 0.66rem var(--body); font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
+  :global(.marks) { position: relative; height: 36px; }
+  :global(.peak) { position: absolute; top: var(--t, 6px); translate: -50% 0; font: 600 0.64rem/1 var(--mono); color: var(--muted); }
+  :global(.peak::before) { content: ''; position: absolute; left: 50%; bottom: 100%; width: 1px; height: calc(var(--t, 6px) - 1px); background: var(--muted); }
+  :global(.today) { position: absolute; top: -68px; translate: -50% 0; display: grid; justify-items: center; gap: 2px; font: 600 0.64rem var(--mono); text-transform: uppercase; color: var(--ink); z-index: 1; }
+  :global(.today b) { order: -2; padding: 2px 7px; background: var(--ink); color: var(--bg); font-size: 0.82rem; }
+  :global(.today::before) { content: ''; order: -1; width: 2px; height: 52px; background: var(--ink); }
+  .bands-k { margin: 6px 0 10px; font: 500 0.7rem/1.4 var(--mono); color: var(--muted); }
+  .bands { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .bands { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  :global(.bandcard) { display: grid; gap: 2px; align-content: start; padding: 12px 14px; box-shadow: inset 0 2px 0 var(--c); }
+  :global(.bandcard.active) { background: color-mix(in srgb, var(--c) 12%, var(--surface)); box-shadow: inset 0 2px 0 var(--c), inset 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent); }
+  :global(.bandcard .range) { font: 0.7rem var(--mono); color: var(--muted); }
+  :global(.bandcard .ans) { margin-top: 4px; font: 700 1.3rem/1.1 var(--display); letter-spacing: -0.02em; color: var(--c); }
+  :global(.bandcard .bl) { font-weight: 600; font-size: 0.86rem; }
+  :global(.bandcard .st) { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px; font-size: 0.74rem; color: var(--muted); }
+  :global(.bandcard .st b) { font: 600 0.92rem var(--display); color: var(--ink); }
+  #band-note { margin-top: 12px; }
+
+  /* history chart */
+  .chart-card .card-head { align-items: center; }
+  .chart-tools { display: flex; flex-wrap: wrap; padding: 0 1px 1px 0; }
+  .chip { margin: 0 -1px -1px 0; padding: 7px 11px; font: 600 0.74rem var(--body); border: 1px solid var(--rule); background: transparent; color: var(--muted); cursor: pointer; transition: color 0.2s, background 0.2s; }
+  .chip:hover { color: var(--ink); }
+  .chip.on { position: relative; color: #17140c; background: var(--gold); border-color: var(--gold); }
+  .chart { position: relative; }
+  #history { width: 100%; height: clamp(260px, 30vw, 420px); display: block; }
+  :global(#history .grid) { stroke: var(--rule); stroke-width: 1; }
+  :global(#history .axis) { fill: var(--muted); font: 11px var(--mono); }
+  :global(#history .crisis) { fill: rgba(224, 90, 71, 0.12); }
+  :global(#history .rec) { fill: #8a8fa8; }
+  :global(#history .bear) { fill: #e05a47; }
+  :global(#history .line) { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
+  :global(#history .line.recession_risk) { stroke: #8fb3ff; }
+  :global(#history .line.acute) { stroke: #e05a47; }
+  :global(#history .line.structural), :global(#history .line.fiscal) { stroke: #c89cf0; }
+  :global(#history .line.stagflation), :global(#history .line.money) { stroke: #f0a35e; }
+  :global(#history .now) { fill: var(--band); stroke: var(--bg); stroke-width: 2; }
+  :global(#history .cursor) { stroke: var(--ink); stroke-dasharray: 3 3; }
+  .tip { position: absolute; top: 18px; width: 220px; padding: 10px 12px; background: rgba(8, 8, 10, 0.96); border: 1px solid var(--rule); font-size: 0.78rem; line-height: 1.5; pointer-events: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 0; }
+  :global(.key) { display: inline-block; width: 12px; height: 8px; }
+  :global(.key.crisis) { background: rgba(224, 90, 71, 0.35); }
+  :global(.key.rec) { background: #8a8fa8; height: 4px; }
+  :global(.key.bear) { width: 0; height: 0; border: 6px solid transparent; border-top: 9px solid #e05a47; }
+  .scorecard { display: grid; gap: 22px; overflow-x: auto; }
+  .scorecard :global(.label) { margin: 0 0 10px; font: 500 0.7rem/1.4 var(--mono); color: var(--muted); }
+  :global(.crisis-grid) { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  :global(.cg) { display: grid; gap: 2px; padding: 10px 12px; box-shadow: inset 2px 0 0 var(--c); }
+  :global(.cg-m) { font: 600 0.68rem var(--mono); color: var(--muted); }
+  :global(.cg-l) { font-size: 0.84rem; line-height: 1.35; }
+  :global(.cg-v) { font: 0.76rem var(--mono); color: var(--muted); }
+  :global(.cg-v b) { font-size: 1rem; color: var(--c); }
+  :global(.cg-v em) { font-style: normal; }
+
+  /* tables */
+  :global(.mini) { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  :global(.mini th), :global(.mini td) { padding: 7px 10px 7px 0; text-align: left; vertical-align: top; line-height: 1.4; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+  :global(.mini td) { font: 0.78rem/1.4 var(--mono); white-space: nowrap; }
+  :global(.mini td.muted) { font-family: var(--body); white-space: normal; }
+  :global(.mini th) { font-weight: 500; }
+  :global(.mini thead th), :global(.mini tr.sub th) { padding-top: 4px; font: 500 0.68rem/1.4 var(--mono); color: var(--muted); }
+  :global(.mini tr.sub th) { padding-top: 14px; }
+  :global(.mini thead th:first-child), :global(.mini tr.sub th:first-child), :global(#fc-inputs td.muted) { white-space: nowrap; }
+  :global(.mini tbody tr:last-child > *) { border-bottom: 0; }
+  :global(.mini caption) { padding-bottom: 8px; text-align: left; font: 500 0.7rem/1.4 var(--mono); color: var(--muted); }
+  :global(.mini.wide) { min-width: 640px; max-width: 1280px; }
+
+  /* cases */
+  .cases { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  @media (max-width: 1400px) { .cases { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
+  :global(.case) { display: flex; flex-direction: column; gap: 8px; padding: 16px !important; box-shadow: inset 0 2px 0 var(--c); }
+  :global(.case-top) { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+  :global(.case .label) { font: 600 0.7rem var(--mono); letter-spacing: 0.06em; color: var(--muted); }
+  :global(.cscore) { display: grid; justify-items: end; color: var(--c); }
+  :global(.cscore b) { font: 600 1.7rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  :global(.cscore span) { margin-top: 3px; font: 600 0.6rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; text-align: right; }
+  :global(.case h3) { font-size: 1.02rem; letter-spacing: -0.015em; }
+  :global(.case dl) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 0.72rem; }
+  :global(.case dl div) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 6px; }
+  :global(.case dt) { color: var(--muted); }
+  :global(.case dd) { margin: 0; font: 600 0.72rem var(--mono); }
+  :global(.case dl i) { grid-column: 1 / -1; height: 2px; background: linear-gradient(90deg, var(--gold) var(--w), var(--rule) var(--w)); }
+  :global(.case .rp) { font-size: 0.74rem; color: var(--muted); }
+  :global(.case .rp b) { color: var(--ink); }
+
+  /* text cards */
+  .prose-card { display: grid; gap: 10px; font-size: 0.9rem; line-height: 1.6; }
+  .prose-card h3 { font: 600 1rem var(--display); letter-spacing: -0.01em; }
+  .ticks { display: grid; gap: 8px; margin: 2px 0; padding-left: 1.1em; list-style: square; }
+  .ticks li::marker { color: var(--gold); }
+  .big { margin: 2px 0 12px; font: 600 2.6rem/1 var(--display); letter-spacing: -0.03em; color: #f0a35e; }
+  .big small { font-size: 0.9rem; letter-spacing: 0; color: var(--muted); }
+  .checklist { list-style: none; margin: 0; padding: 0; display: grid; }
+  :global(.checklist li) { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 0.82rem; line-height: 1.4; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+  :global(.checklist b) { font-size: 0.7rem; color: #6fbf8e; }
+  :global(.checklist li.met b) { color: #e05a47; }
+  :global(.checklist em) { font: 0.72rem var(--mono); font-style: normal; color: var(--muted); }
+
+  /* event study */
+  :global(#leadchart) { width: 100%; height: 260px; display: block; }
+  :global(#leadchart .grid) { stroke: var(--rule); }
+  :global(#leadchart .mid) { stroke: var(--muted); stroke-dasharray: 2 4; }
+  :global(#leadchart .start) { stroke: var(--ink); stroke-width: 1.5; }
+  :global(#leadchart .axis) { fill: var(--muted); font: 11px var(--mono); }
+
+  /* gold venues: metal flowing to the dearer market (homage to didthesystemcollapse.com) */
+  .tug { position: relative; height: 60px; margin: 0 0 12px; background: linear-gradient(90deg, rgba(111, 191, 142, 0.1), rgba(224, 90, 71, 0.1)); overflow: hidden; }
+  .tug::before, .tug::after { position: absolute; top: 8px; font: 600 0.66rem var(--mono); color: var(--muted); }
+  .tug::before { content: 'cheapest · ' attr(data-cheap); left: 10px; }
+  .tug::after { content: attr(data-dear) ' · dearest'; right: 10px; }
+  .lane { position: absolute; inset: 26px 0 0; }
+  .lane :global(span) { position: absolute; top: 10px; left: -30px; width: 20px; height: 9px; background: linear-gradient(180deg, #f3d488, #b88a2f); box-shadow: 0 0 10px rgba(217, 180, 90, 0.45); animation: flow var(--speed, 4s) linear infinite; }
+  @keyframes flow { to { left: calc(100% + 30px); } }
+
+  /* debt */
+  .debt-counter { text-align: center; padding-block: clamp(18px, 2.4vw, 30px) !important; background: radial-gradient(600px 140px at 50% 0%, rgba(224, 90, 71, 0.1), transparent), var(--surface); }
+  .counter { margin: 6px 0; font: 700 clamp(1.5rem, 4.6vw, 4rem)/1.1 var(--mono); font-variant-numeric: tabular-nums; color: #e05a47; }
+  .bars { display: grid; gap: 9px; }
+  :global(.gbar) { display: grid; grid-template-columns: 116px minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 0.82rem; }
+  :global(.gbar div) { position: relative; height: 10px; background: var(--rule); }
+  :global(.gbar i) { display: block; height: 100%; background: linear-gradient(90deg, #b88a2f, #e05a47); }
+  :global(.gbar u) { position: absolute; top: -3px; width: 2px; height: 16px; translate: -1px 0; background: var(--ink); }
+  :global(.gbar b) { font: 600 0.78rem var(--mono); text-align: right; }
+  :global(#niip) { width: 100%; height: 220px; display: block; }
+  :global(#niip .grid) { stroke: var(--rule); }
+  :global(#niip .axis) { fill: var(--muted); font: 11px var(--mono); }
+  :global(#niip .line) { fill: none; stroke: #e05a47; stroke-width: 2; }
+  :global(#niip .area) { fill: rgba(224, 90, 71, 0.12); }
+
+  /* method */
+  .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .step { display: grid; gap: 8px; align-content: start; font-size: 0.88rem; line-height: 1.6; }
+  .step h3 { font: 600 1rem var(--display); letter-spacing: -0.01em; }
+  .step-n { display: grid; place-items: center; width: 22px; height: 22px; font: 700 0.74rem var(--mono); color: #17140c; background: var(--gold); }
+  .versions ol { margin: 0; padding-left: 1.2em; columns: 2 440px; column-gap: 40px; font-size: 0.86rem; line-height: 1.6; color: var(--muted); }
+  .versions li { break-inside: avoid; margin-bottom: 10px; }
+  .versions strong { color: var(--ink); }
+  .terminal { margin: 0; padding: 16px 18px; max-height: 480px; overflow: auto; background: #050506; border: 1px solid var(--rule); font: 0.74rem/1.7 var(--mono); color: #c9c3b3; }
+  :global(#updated.stale) { color: #e8923a; }
+
+  /* phones (last, so it overrides the rules above): fewer boxes, tighter rows */
+  @media (max-width: 600px) {
+    .hero .lede { font-size: 0.9rem; }
+    .hero { gap: 18px; padding-block: 18px 14px; }
+    .hero-main { gap: 10px; }
+    .hero h1 { font-size: 1.9rem; }
+    .answer { --fs: 22vw; }
+    /* one swipeable row of red flags instead of a wrapped pile */
+    .flag-strip { justify-self: stretch; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); }
+    .flag-strip::-webkit-scrollbar { display: none; }
+    .hero-side { grid-template-columns: 1fr; }
+    #gauge { max-width: 250px; }
+    .score { font-size: 2.4rem; }
+    .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 0; border-left: 1px solid var(--rule); }
+    :global(.ro) { padding: 10px 8px !important; }
+    :global(.ro b) { font-size: 1.25rem; }
+    :global(.ro span) { font-size: 0.66rem; }
+    :global(.ro em) { display: none; }
+    /* odds as a list */
+    .odds-grid { grid-template-columns: 1fr; }
+    :global(.odd) { grid-template-columns: 64px minmax(0, 1fr); gap: 2px 12px; align-items: center; padding: 10px 12px !important; }
+    :global(.odd .ov) { grid-row: span 2; font-size: 1.5rem; }
+    :global(.odd .ot) { font-size: 0.8rem; }
+    :global(.odd .tiny) { display: none; }
+    .subnav a { padding: 11px 10px 10px; font-size: 0.78rem; }
+    :global(.pv) { font-size: 2.2rem; }
+    :global(.comp li) { grid-template-columns: minmax(0, 1fr) auto 28px 22px; gap: 6px; }
+    :global(.flags li) { gap: 10px; font-size: 0.82rem; }
+    /* bands as rows */
+    .scale { margin-top: 30px; }
+    :global(.seg em), :global(.peak) { display: none; }
+    :global(.segs) { height: 18px; }
+    :global(.marks) { height: 22px; }
+    :global(.today) { top: -48px; }
+    :global(.today::before) { height: 32px; }
+    .bands { grid-template-columns: 1fr; }
+    :global(.bandcard) { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 8px 12px; box-shadow: inset 2px 0 0 var(--c); }
+    :global(.bandcard.active) { box-shadow: inset 2px 0 0 var(--c), inset 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent); }
+    :global(.bandcard .range) { grid-row: 1 / 3; }
+    :global(.bandcard .ans) { grid-column: 2; margin: 0; font-size: 1.02rem; }
+    :global(.bandcard .bl) { grid-column: 2; font-size: 0.74rem; font-weight: 500; color: var(--muted); }
+    :global(.bandcard .st) { grid-column: 3; grid-row: 1 / 3; flex-direction: column; align-items: end; gap: 0; margin: 0; font-size: 0.68rem; }
+    :global(.bandcard .st b) { font-size: 0.82rem; }
+    /* chart: series picker scrolls sideways */
+    .chart-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    .chart-tools::-webkit-scrollbar { display: none; }
+    .chip { flex: none; padding: 6px 10px; }
+    #history { height: 230px; }
+    .tip { width: 172px; font-size: 0.72rem; }
+    :global(.crisis-grid) { grid-template-columns: 1fr; }
+    :global(.cg) { grid-template-columns: 58px minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding: 7px 10px; }
+    :global(.cg-l) { font-size: 0.78rem; }
+    /* cases: a swipeable row */
+    .cases { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 80%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); border: 0; }
+    .cases::-webkit-scrollbar { display: none; }
+    :global(.cases.tiles > *) { scroll-snap-align: start; border-top-width: 1px; }
+    :global(.cases.tiles > :first-child) { border-left-width: 1px; }
+    :global(.mini) { font-size: 0.78rem; }
+    :global(.mini th), :global(.mini td) { padding: 6px 8px 6px 0; }
+    :global(.mini td) { font-size: 0.74rem; }
+    :global(#lead-table td:last-child) { white-space: normal; }
+    .prose-card, .step { font-size: 0.86rem; }
+    .big { font-size: 2.2rem; }
+    :global(.checklist li) { grid-template-columns: 16px minmax(0, 1fr); }
+    :global(.checklist em) { grid-column: 2; }
+    :global(.gbar) { grid-template-columns: 88px minmax(0, 1fr) 42px; gap: 8px; font-size: 0.76rem; }
+    .tug::before, .tug::after { max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.6rem; }
+    .steps { grid-template-columns: 1fr; }
+    .versions ol { font-size: 0.82rem; }
+    .terminal { max-height: 320px; padding: 12px; font-size: 0.66rem; }
+  }
+</style>

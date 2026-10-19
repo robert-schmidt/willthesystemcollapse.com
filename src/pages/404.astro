@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Page not found · Will the system collapse?" description="This page doesn't exist. The live monitor does." noindex>
+  <main class="nf">
+    <p class="code">404</p>
+    <h1>This page collapsed.</h1>
+    <p>The system, so far, hasn't.</p>
+    <a href="/">Open the live monitor →</a>
+  </main>
+</Base>
+
+<style>
+  .nf { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
+  .code { font: 700 0.9rem var(--mono); letter-spacing: 0.2em; color: var(--gold); }
+  h1 { font-size: clamp(2rem, 6vw, 3.6rem); letter-spacing: -0.035em; }
+  a { color: var(--gold); margin-top: 10px; }
+</style>

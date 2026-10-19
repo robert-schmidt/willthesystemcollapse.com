@@ -1,0 +1,16 @@
+---
+import { ARCHIVE, REPO } from '../site';
+---
+
+<footer class="page footer">
+  <p class="muted small">Education and entertainment only, not financial advice. Data © their publishers; see the <a href="/#feeds-s">data feeds</a>.</p>
+  <p class="small">
+    <a href="/about/">About</a> · Inspired by <a href={ARCHIVE} target="_blank" rel="noopener">didthesystemcollapse.com</a> (2018 archive) · <a href={REPO} target="_blank" rel="noopener">Open source on GitHub</a> · <a href={`${REPO}/issues`} target="_blank" rel="noopener">Contact</a>
+  </p>
+</footer>
+
+<style>
+  .footer { display: grid; gap: 6px; padding-block: 28px 40px; border-top: 1px solid var(--rule); }
+  .footer a { color: var(--muted); }
+  @media (max-width: 600px) { .footer { padding-block: 22px 32px; } }
+</style>

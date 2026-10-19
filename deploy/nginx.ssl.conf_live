@@ -1,0 +1,28 @@
+# Copy of /home/willthesystemcollapse/conf/web/willthesystemcollapse.com/nginx.ssl.conf_live (Hestia includes
+# nginx.ssl.conf_* inside the domain's HTTPS server block; changes need `nginx -t && systemctl reload nginx`).
+# www. redirects to the apex through Hestia (v-add-web-domain-redirect), not here.
+# Our own 404 page instead of Hestia's server-wide one.
+error_page 404 /404.html;
+
+# For every response whose location sets no headers of its own (HSTS comes from Hestia's nginx.hsts.conf)
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+# Pages change with every deploy, and the home page every 15 minutes (the collector writes the live reading into it)
+location ~* \.html$ {
+	expires epoch;
+}
+
+# Built assets have content-hashed names, so cache them for good (Hestia's template leaves fonts out)
+location ^~ /_astro/ {
+	expires max;
+}
+
+# The collector's JSON is open data: any site may read it, never cached.
+location ^~ /live/ {
+	add_header Access-Control-Allow-Origin "*" always;
+	add_header Cache-Control "no-cache" always;
+	include /home/willthesystemcollapse/conf/web/willthesystemcollapse.com/nginx.hsts.conf*;
+}

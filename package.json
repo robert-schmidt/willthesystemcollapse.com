@@ -1,0 +1,21 @@
+{
+  "name": "willthesystemcollapse.com",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "python3 collector/test_collapse.py",
+    "collect": "python3 collector/collect.py --out public/live",
+    "deploy": "ssh $(sed -n 's/^DEPLOY_SSH=//p' .secrets) 'sudo -u willthesystemcollapse -H bash -lc \"cd ~/app/repo && git fetch -q origin && git reset -q --hard origin/main && bash deploy/deploy.sh\"'"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/space-grotesk": "5.3.0",
+    "astro": "7.3.5"
+  }
+}

@@ -1,0 +1,218 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+import { ARCHIVE, LICENSE, REPO } from '../site';
+
+const SITE = Astro.site!.href.replace(/\/$/, '');
+const ld = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'AboutPage', '@id': `${SITE}/about/#webpage`, url: `${SITE}/about/`, name: 'What is the financial system, and could it collapse?', inLanguage: 'en', isPartOf: { '@id': `${SITE}/#website` }, breadcrumb: { '@id': `${SITE}/about/#breadcrumb` } },
+    { '@type': 'BreadcrumbList', '@id': `${SITE}/about/#breadcrumb`, itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE}/` },
+      { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE}/about/` },
+    ] },
+  ],
+};
+---
+
+<Base
+  title="What is the financial system, and could it collapse? · About"
+  description="What “the system” is (the monetary system: money, banks, governments, companies and the people inside them), what a financial collapse would look like, and whether AI could build a better one."
+  ld={ld}
+>
+  <Header />
+
+  <main class="page">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">About</p>
+        <h1>What is the system, and could it be better?</h1>
+        <p class="lede">Every 15 minutes this site measures how close the financial system is to breaking. Here is what we mean by “the system”, what a collapse would look like, and whether AI could design something better.</p>
+      </div>
+      <ol class="toc" aria-label="Questions">
+        <li><a href="#system"><span>01</span>What, or who, is the system?</a></li>
+        <li><a href="#collapse"><span>02</span>What would a collapse look like?</a></li>
+        <li><a href="#ai"><span>03</span>Can AI develop a better system?</a></li>
+        <li><a href="#us"><span>04</span>Who’s behind this?</a></li>
+      </ol>
+    </section>
+
+    <section class="section" id="system">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">01</span>The system</p><h2 class="section-title">What, or who, is the system?</h2></div>
+        <p class="lede">The monetary system: money, debt and the promises behind them. It is the backbone of every modern society, and nobody runs it alone.</p></header>
+      <div class="prose">
+        <p>It is what lets eight billion strangers work for, trade with and lend to each other. A salary, a mortgage, a pension, a government bond and a share in a company are all promises inside it. It runs on rules and institutions, and on one shared belief: that money will buy roughly the same tomorrow, and that debts will be paid.</p>
+      </div>
+      <div class="actors tiles">
+        <div>
+          <h3>Central banks</h3>
+          <p>Set the price of money and lend when nobody else will. The Federal Reserve’s decisions set the cost of borrowing far beyond the US, because so much of the world borrows in dollars.</p>
+          <p class="watch">On the monitor: <a href="/#stag-s">Fed funds rate, real rate, balance sheet</a></p>
+        </div>
+        <div>
+          <h3>Banks</h3>
+          <p>Create most of the money we use: when a bank makes a loan, it creates a new deposit (<a href="https://www.bankofengland.co.uk/quarterly-bulletin/2014/q1/money-creation-in-the-modern-economy" target="_blank" rel="noopener">Bank of England, 2014</a>). When banks stop trusting each other, a downturn becomes a crisis.</p>
+          <p class="watch">On the monitor: <a href="/#pillars-s">stress indices, credit spreads</a></p>
+        </div>
+        <div>
+          <h3>Governments</h3>
+          <p>Tax, spend and borrow. Their bonds are the “safe asset” everything else is priced against, which is why their debt matters to everyone else.</p>
+          <p class="watch">On the monitor: <a href="/#debt-s">federal debt, deficit, interest bill</a></p>
+        </div>
+        <div>
+          <h3>Corporations and industries</h3>
+          <p>Borrow to invest, pay most wages and issue the shares that pensions own. Energy, food, housing, health and technology all run on credit.</p>
+          <p class="watch">On the monitor: <a href="/#flags-s">corporate debt, stock valuations, oil, house prices</a></p>
+        </div>
+        <div>
+          <h3>People</h3>
+          <p>Billionaires, the middle class and the working class sit in different seats. Most people live on wages, while wealth sits in assets: homes, shares, pensions. When asset prices outrun wages, owners pull ahead, and inflation hits hardest those who live on wages and cash. In the US the richest 1% hold close to a third of household wealth (<a href="https://www.federalreserve.gov/releases/z1/dataviz/dfa/distribute/table/" target="_blank" rel="noopener">Federal Reserve</a>).</p>
+          <p class="watch">On the monitor: <a href="/#stag-s">unemployment, inflation</a></p>
+        </div>
+        <div>
+          <h3>The anchors</h3>
+          <p>The US dollar is the world’s main reserve currency and US Treasuries its main collateral. Gold is the odd one out: it isn’t anyone’s debt, which is why central banks hold it.</p>
+          <p class="watch">On the monitor: <a href="/#markets-s">the dollar, gold in ten currencies, central-bank gold</a></p>
+        </div>
+      </div>
+      <div class="prose">
+        <p>So who is the system? All of us, in different seats. The saver’s deposit is the bank’s loan, the worker’s pension owns the shares, and the bank holds the government’s bonds as its safest asset. That is why trouble in one corner travels, and why this site watches all of them at once.</p>
+      </div>
+    </section>
+
+    <section class="section" id="collapse">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">02</span>The collapse</p><h2 class="section-title">What would a collapse look like?</h2></div>
+        <p class="lede">Not the end of the world, and rarely overnight. A collapse is when the promises stop being kept at scale: banks can’t pay depositors, credit freezes, a government can’t borrow, or money loses value so fast that people stop using it.</p></header>
+      <div class="timeline tiles">
+        <div class="ev"><b>1923</b><span>Germany</span><p>At the peak, prices doubled every few days and savings were wiped out.</p></div>
+        <div class="ev"><b>1930–33</b><span>United States</span><p>About 9,000 banks failed. Deposit insurance was created in 1933 because of it.</p></div>
+        <div class="ev"><b>1971</b><span>The world</span><p>The US ended the dollar’s link to gold, and the Bretton Woods system with it. The system didn’t end; it changed.</p></div>
+        <div class="ev"><b>2001</b><span>Argentina</span><p>Bank deposits were frozen and the government defaulted on its debt.</p></div>
+        <div class="ev"><b>2008</b><span>Global</span><p>Lehman Brothers failed and credit froze; governments and central banks had to rescue the banks.</p></div>
+        <div class="ev"><b>2008</b><span>Zimbabwe</span><p>Hyperinflation made the Zimbabwe dollar worthless; the country stopped using it in 2009.</p></div>
+      </div>
+      <div class="prose">
+        <p>Most of these ended a version of the system, not the system itself. On our scale, the top band, “systemic breakdown”, marks the months since 1973 when governments or central banks had to step in to keep it working.</p>
+        <p>Will it collapse now? <a href="/">See today’s answer</a>. Treat it as a thermometer with a forecast attached, not a prophecy.</p>
+      </div>
+    </section>
+
+    <section class="section" id="ai">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">03</span>What comes next</p><h2 class="section-title">Can AI develop a better system?</h2></div>
+        <p class="lede">We hope so. Honestly, we don’t know, and nobody does.</p></header>
+      <div class="prose">
+        <p>Nobody designed today’s system. It grew patch by patch, and most patches came after a disaster: central banks after panics, deposit insurance after the 1930s, tougher bank rules after 2008. A tangled, high-stakes system built by trial and error is exactly the kind of problem a genuinely smarter intelligence might see through. What an AGI would actually propose, we can’t know. That is the point of something smarter than us.</p>
+      </div>
+      <div class="ai tiles">
+        <div style="--c:#6fbf8e">
+          <h3>What AI might get right</h3>
+          <ul>
+            <li>See risk while it builds. Most economic data arrives monthly, weeks late; this site is a crude attempt at reading it continuously.</li>
+            <li>Rules that respond on time and in the open, instead of waiting for committees and election cycles.</li>
+            <li>Credit that reaches productive uses and new people, not mainly those who already own assets.</li>
+            <li>Ideas nobody has had yet.</li>
+          </ul>
+        </div>
+        <div style="--c:#e05a47">
+          <h3>What could go wrong</h3>
+          <ul>
+            <li>A handful of companies owning the most capable AI could become a new “too big to fail”.</li>
+            <li>Trading algorithms reacting to each other can turn a wobble into a crash in minutes, as the 2010 flash crash showed.</li>
+            <li>If AI does much of today’s paid work, the wages that taxes, pensions and loans depend on shrink. The system would have to change either way.</li>
+            <li>A better design still needs trust and adoption. The hardest question in money has always been political: who takes the losses.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="prose">
+        <p class="muted">A lesson from our own small model: we tried letting an algorithm choose the score’s weights, and it did worse on years it hadn’t seen, because a dozen crises are too few to learn from. Cleverer is not automatically better. Whatever an AI proposes deserves the same test: does it work on the future, not just on the past?</p>
+        <p class="hope">Taking the happy path, where AGI turns out to be on our side rather than wiping us out, we are genuinely curious what it will come up with. If we don’t mess things up even worse before it gets here.</p>
+      </div>
+    </section>
+
+    <section class="section" id="us">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">04</span>The fine print</p><h2 class="section-title">Who’s behind this?</h2></div>
+        <p class="lede">A small, independent project. The <a href={REPO} target="_blank" rel="noopener">code is open on GitHub</a> and every number comes from public data. No ads, no affiliate links.</p></header>
+      <div class="facts tiles">
+        <div>
+          <h3>Why gold?</h3>
+          <p>Gold is nobody’s debt, which is why central banks hold it and why the original site compared gold prices. It is no safe bet either: from its 1980 peak it fell about 70% by 2001.</p>
+        </div>
+        <div>
+          <h3>Fair, not alarming</h3>
+          <p>The score aims to be neither alarming nor reassuring. The formula changes only when a change does better on data it wasn’t fitted to, and every change is listed under <a href="/#method-s">How the formula evolved</a>. Spotted a mistake? <a href={`${REPO}/issues`} target="_blank" rel="noopener">Open an issue on GitHub</a>.</p>
+        </div>
+        <div>
+          <h3>Not advice</h3>
+          <p>Education and entertainment, not financial advice. Everything comes from public sources, in one <a href="/live/collapse.json">open file</a>: our scores are free to reuse under <a href={LICENSE} target="_blank" rel="noopener">CC BY 4.0</a>, each series under its publisher’s terms. No accounts, no forms; we count visits with Google Analytics.</p>
+        </div>
+        <div>
+          <h3>Where it started</h3>
+          <p>Inspired by <a href={ARCHIVE} target="_blank" rel="noopener">didthesystemcollapse.com</a>, whose “NOT YET” was a switch flipped by hand. This one is computed, every 15 minutes, and has run since October 2026.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  :global(html) { scroll-padding-top: calc(var(--top) + 12px); }
+  .intro { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px clamp(24px, 4vw, 64px); align-items: end; padding-block: clamp(28px, 4vw, 56px) clamp(24px, 3vw, 44px); }
+  .intro h1 { margin: 10px 0 14px; font-size: clamp(2rem, 3.6vw, 3.4rem); letter-spacing: -0.035em; line-height: 1.04; }
+  .toc { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  .toc a { display: flex; align-items: baseline; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--rule); text-decoration: none; font: 500 1rem/1.3 var(--display); letter-spacing: -0.01em; transition: color 0.2s; }
+  .toc a:hover { color: var(--gold); }
+  .toc span { font: 0.72rem var(--mono); color: var(--muted); }
+
+  /* running text sits in the right-hand column, under each section's short answer */
+  .prose { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px clamp(24px, 4vw, 64px); }
+  .prose > * { grid-column: 2; max-width: 68ch; font-size: 0.98rem; line-height: 1.7; color: #d8d1c1; }
+  .prose a, .lede a, .facts a { color: var(--gold); }
+  .prose .muted { font-size: 0.9rem; color: var(--muted); }
+  .hope { padding-left: 16px; box-shadow: inset 2px 0 0 var(--gold); font: 500 clamp(1.1rem, 1.6vw, 1.35rem)/1.45 var(--display) !important; letter-spacing: -0.015em; color: var(--ink) !important; }
+
+  h3 { font-size: 1.02rem; letter-spacing: -0.015em; }
+  .actors { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .actors > div, .facts > div { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; font-size: 0.88rem; line-height: 1.6; color: #cdc6b6; }
+  .watch { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--rule); font: 0.72rem/1.5 var(--mono); color: var(--muted); }
+  .watch a { color: var(--gold); text-decoration: none; }
+  .watch a:hover { text-decoration: underline; }
+
+  .timeline { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .ev { display: grid; gap: 4px; align-content: start; padding: 14px 16px; }
+  .ev b { font: 600 1.5rem/1 var(--display); letter-spacing: -0.03em; color: var(--gold); }
+  .ev span { font: 600 0.66rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .ev p { margin-top: 4px; font-size: 0.84rem; line-height: 1.5; color: #cdc6b6; }
+
+  .ai { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai > div { padding: 16px 18px; box-shadow: inset 0 2px 0 var(--c); }
+  .ai h3 { margin-bottom: 10px; color: var(--c); }
+  .ai ul { display: grid; gap: 8px; margin: 0; padding-left: 1.1em; list-style: square; font-size: 0.9rem; line-height: 1.6; color: #cdc6b6; }
+  .ai li::marker { color: var(--c); }
+
+  .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  @media (max-width: 1200px) { .timeline { grid-template-columns: repeat(3, minmax(0, 1fr)); } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1100px) { .actors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 960px) {
+    .intro, .prose { grid-template-columns: 1fr; }
+    .prose > * { grid-column: 1; }
+  }
+  @media (max-width: 640px) {
+    .intro { padding-block: 20px 16px; gap: 18px; }
+    .intro h1 { font-size: 1.9rem; }
+    .toc a { padding: 9px 0; font-size: 0.92rem; }
+    .prose > * { font-size: 0.92rem; }
+    .actors, .ai, .facts { grid-template-columns: 1fr; }
+    .actors > div, .facts > div, .ai > div { padding: 12px 14px; font-size: 0.86rem; }
+    /* timeline as compact rows: year | place + what happened */
+    .timeline { grid-template-columns: 1fr; }
+    .ev { grid-template-columns: 74px minmax(0, 1fr); gap: 2px 10px; padding: 10px 12px; }
+    .ev b { grid-row: 1 / 3; font-size: 1.05rem; }
+    .ev p { margin: 0; font-size: 0.82rem; }
+  }
+</style>

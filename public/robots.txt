@@ -1,0 +1,6 @@
+# Search, AI answers and AI training are all welcome (contentsignals.org)
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
+
+Sitemap: https://willthesystemcollapse.com/sitemap.xml

@@ -1,0 +1,13 @@
+# Will the system collapse?
+
+> A live, backtested financial stress index for the US and global financial system. A 0–100 score, refreshed every 15 minutes from 140+ public data series (Federal Reserve, FRED, US Treasury, OFR, ECB, IMF, World Bank, exchanges), answers "Will the system collapse?" with NO, NOT YET, WOBBLING or YES, alongside a 12-month US recession probability and the historical odds of a crisis after months like this one. Education only, not financial advice.
+
+## Pages
+
+- [Live monitor](https://willthesystemcollapse.com/): today's answer and score, the four pillars (market stress, recession warning, inflation and money, fiscal), red flags, crisis odds, a backtest since 1973, the recession model, gold markets, debt and the full method.
+- [About](https://willthesystemcollapse.com/about/): what the financial system is and who is in it, what a collapse would look like, whether AI could build a better system, and who runs the site.
+
+## Data
+
+- [collapse.json](https://willthesystemcollapse.com/live/collapse.json): everything on the monitor in one open JSON file, rebuilt every 15 minutes. Our scores are CC BY 4.0; each underlying series stays under its publisher's terms.
+- [Source code](https://github.com/robert-schmidt/willthesystemcollapse.com): collector, scoring method, backtest and site.

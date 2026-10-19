@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.env*
+.secrets
+.DS_Store
+collector/data/
+public/live/
+__pycache__/
+CLAUDE.local.md

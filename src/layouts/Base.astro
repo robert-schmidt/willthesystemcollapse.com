@@ -1,0 +1,164 @@
+---
+import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/inter';
+// preloaded: the browser otherwise finds them only after parsing the CSS (the latin subsets cover the site's text)
+import displayFont from '@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2?url';
+import bodyFont from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string; // social card, site-relative
+  type?: string; // og:type
+  ld?: object; // JSON-LD structured data
+  noindex?: boolean;
+}
+const { title, description, image = '/og.png', type = 'website', ld, noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const og = new URL(image, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Google tag (gtag.js) -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-N3E6E1JYE3"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-N3E6E1JYE3');
+    </script>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={bodyFont} as="font" type="font/woff2" crossorigin />
+    <link rel="alternate" type="application/json" href="/live/collapse.json" title="Open data" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0B0B0E" />
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content="Will the system collapse?" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {!noindex && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={og} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={og} />
+    {ld && <script type="application/ld+json" set:html={JSON.stringify(ld)} />}
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #0b0b0e;
+    --surface: #111115;
+    --ink: #f4efe3;
+    --muted: #9c9584;
+    --rule: #26241f;
+    --gold: #d9b45a;
+    --display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+    --body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+    --gutter: clamp(16px, 3vw, 44px);
+    --top: 56px; /* sticky top bar height */
+    --band: var(--gold); /* the live band's colour, set by the monitor script */
+    color-scheme: dark;
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 1.0625rem/1.65 var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+  img {
+    max-width: 100%;
+    display: block;
+  }
+  a {
+    color: inherit;
+  }
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  p {
+    margin: 0;
+  }
+
+  /* shared building blocks (the monitor renders many of these from its script, so they are global) */
+  .page { width: 100%; padding-inline: var(--gutter); }
+  .gold { color: var(--gold); }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.84rem; line-height: 1.55; }
+  .tiny { font-size: 0.72rem; line-height: 1.5; }
+  .eyebrow { font: 600 0.7rem/1.4 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+  .lede { font-size: clamp(0.94rem, 1.05vw, 1.04rem); line-height: 1.6; max-width: 68ch; color: #cdc6b6; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(111, 191, 142, 0.6); } 70% { box-shadow: 0 0 0 8px rgba(111, 191, 142, 0); } 100% { box-shadow: 0 0 0 0 rgba(111, 191, 142, 0); } }
+
+  /* cards: flat panels on hairline rules */
+  .card { position: relative; min-width: 0; padding: clamp(14px, 1.3vw, 20px); background: var(--surface); border: 1px solid var(--rule); }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .card-head h2, .card-head h3 { font: 600 0.98rem/1.3 var(--display); letter-spacing: -0.01em; }
+  .card-head .meta { font: 500 0.68rem/1.4 var(--mono); color: var(--muted); }
+  .card-head.spaced { margin-top: 20px; }
+  /* tiles: cells share one set of 1px rules instead of floating as separate boxes */
+  .tiles { display: grid; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+  .tiles > * { min-width: 0; background: var(--surface); border: 0 solid var(--rule); border-width: 0 1px 1px 0; }
+
+  /* sections: title left, intro right */
+  .section { display: grid; gap: clamp(14px, 1.4vw, 18px); padding-block: clamp(32px, 3.6vw, 52px); border-top: 1px solid var(--rule); }
+  .sec-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px clamp(24px, 4vw, 64px); align-items: end; margin-bottom: 4px; }
+  .sec-head > div:only-child { grid-column: 1 / -1; }
+  .sec-head .num { font-family: var(--mono); letter-spacing: 0.04em; color: var(--muted); margin-right: 10px; }
+  .sec-head .num::after { content: ' /'; }
+  .section-title { font-size: clamp(1.5rem, 2.3vw, 2.2rem); letter-spacing: -0.03em; line-height: 1.08; margin-top: 8px; }
+  @media (max-width: 960px) { .sec-head { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    :root { --top: 52px; }
+    .card { padding: 12px 14px; }
+    .card-head { margin-bottom: 10px; }
+    .section { padding-block: 28px; gap: 12px; }
+    .section-title { font-size: 1.4rem; margin-top: 6px; }
+    .lede { font-size: 0.9rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+</style>
