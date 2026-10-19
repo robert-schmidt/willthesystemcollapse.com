@@ -40,6 +40,12 @@ const ld = {
   description={DESCRIPTION}
   ld={ld}
 >
+  <script is:inline slot="head">
+    // simple view unless the visitor chose the full one; a link to a section (/#method-s) opens the full monitor
+    var v = 'simple';
+    try { v = localStorage.getItem('view') || v; } catch (e) {}
+    document.documentElement.dataset.view = location.hash.length > 1 ? 'full' : v;
+  </script>
   <Header />
   <div class="ticker" aria-hidden="true" data-nosnippet><div class="track" id="ticker"></div></div>
 
@@ -50,6 +56,7 @@ const ld = {
         <h1>Will the system collapse?</h1>
         <p class="answer-k">Right now</p>
         <p class="answer" id="answer" data-band="checking" style="--len:9">CHECKING…</p>
+        <p class="lede simple-only">A 0–100 gauge of stress in the financial system, built from 140+ public data feeds and backtested on every crisis since 1973.</p>
         <p class="lede" id="summary">Reading over 140 public data feeds from central banks, the US Treasury and markets.</p>
         <div class="flag-strip" id="flag-strip"></div>
         <div class="unusual"><p class="eyebrow">Unusual right now</p><ul id="unusual-list"><li class="none">Checking…</li></ul></div>
@@ -102,8 +109,10 @@ const ld = {
 
     <section class="section" id="pillars-s">
       <header class="sec-head"><div><p class="eyebrow"><span class="num">01</span>The five pillars</p><h2 class="section-title">What the score is made of</h2></div>
-        <p class="lede">Each pillar is the average percentile of its inputs against their own history: 90 means worse than 90% of all months on record.</p></header>
+        <p class="lede full-only">Each pillar is the average percentile of its inputs against their own history: 90 means worse than 90% of all months on record.</p>
+        <p class="lede simple-only">Each compares today with every month on record: 90 means worse than 90% of them.</p></header>
       <div class="pillars" id="pillars"></div>
+      <p class="simple-only"><button type="button" class="set-view more" value="full">Full monitor: red flags, crisis odds, 50 years of history, the method →</button></p>
     </section>
 
     <section class="section" id="flags-s">
@@ -358,12 +367,13 @@ const ld = {
   const $ = (id: string) => document.getElementById(id)!;
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
   const BAND_COLORS: Record<string, string> = { calm: '#6fbf8e', normal: '#a9c46c', elevated: '#d9b45a', high: '#e8923a', crisis: '#e05a47', systemic: '#b3261e' };
-  const PILLAR_COPY: Record<string, [string, string]> = {
-    stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown, unemployment, and funding dislocations: banks paying up to borrow, near-term fear above longer-term.'],
-    warning: ['Early warning', 'Is a recession coming within a year? The yield-curve and financial-conditions model, as a percentile of its own history.'],
-    money: ['Inflation & money', 'Is money losing value? Official and alternative inflation, expectations, money growth, the dollar and gold.'],
-    fiscal: ['Debt & fragility', 'How much could break? Government and corporate debt, deficits, the interest bill, r − g, foreign debt, stock valuations and bond sell-offs.'],
-    buildup: ['Build-up', 'Are excesses building? How fast private debt has outgrown the economy over three years, and how cheap credit was two years ago: the two signals that come before banking crises.'],
+  // [title, full view, simple view]; the simple line for the warning pillar gets the recession probability
+  const PILLAR_COPY: Record<string, [string, string, string]> = {
+    stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown, unemployment, and funding dislocations: banks paying up to borrow, near-term fear above longer-term.', 'Is something breaking right now? Market fear, credit spreads, bank funding.'],
+    warning: ['Early warning', 'Is a recession coming within a year? The yield-curve and financial-conditions model, as a percentile of its own history.', 'Is a recession coming?'],
+    money: ['Inflation & money', 'Is money losing value? Official and alternative inflation, expectations, money growth, the dollar and gold.', 'Is money losing value? Inflation, money growth, the dollar, gold.'],
+    fiscal: ['Debt & fragility', 'How much could break? Government and corporate debt, deficits, the interest bill, r − g, foreign debt, stock valuations and bond sell-offs.', 'How much could break? Government and company debt, deficits, stock prices.'],
+    buildup: ['Build-up', 'Are excesses building? How fast private debt has outgrown the economy over three years, and how cheap credit was two years ago: the two signals that come before banking crises.', 'Are excesses building? How fast private debt grows, how cheap credit is.'],
   };
   const PILLARS = ['stress', 'warning', 'money', 'fiscal', 'buildup'];
   const money = (v: number, d = 2) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -414,7 +424,7 @@ const ld = {
     const open = matchMedia('(min-width: 761px)').matches ? ' open' : '';  // phones start with the input lists folded
     $('pillars').innerHTML = PILLARS.filter((p) => p in d.pillars)  // a v5 JSON (mid-deploy) has no build-up pillar
       .map((p) => {
-        const [title, text] = PILLAR_COPY[p];
+        const [title, text, short] = PILLAR_COPY[p];
         const v = d.pillars[p];
         const col = PILLAR_COLORS[p];
         const rows =
@@ -435,7 +445,8 @@ const ld = {
           <p class="pv">${v.toFixed(0)}<small>/100</small></p>
           <div class="pbar"><i style="width:${v}%"></i></div>
           ${spark(last10(p), col)}<p class="tiny muted spark-cap">last 10 years</p>
-          <p class="muted small">${text}</p>
+          <p class="muted small full-only">${text}</p>
+          <p class="small simple-only">${short}${p === 'warning' ? ` Chance one starts within 12 months: <b>${d.forecast.probability.toFixed(0)}%</b>.` : ''}</p>
           <details class="inputs"${open}><summary>${what}</summary><ul class="comp">${rows}</ul></details></article>`;
       })
       .join('');
@@ -889,6 +900,25 @@ const ld = {
     }
   }
   hookChart();
+  // the view: simple (the default) or full; the inline script in <head> sets it before the first paint
+  function setView(v: string) {
+    document.documentElement.dataset.view = v;
+    document.querySelectorAll<HTMLButtonElement>('.view button').forEach((b) => b.setAttribute('aria-pressed', String(b.value === v)));
+    dispatchEvent(new Event('resize'));  // charts drawn while hidden had no width
+  }
+  document.querySelectorAll<HTMLButtonElement>('.set-view').forEach((b) =>
+    b.addEventListener('click', () => {
+      setView(b.value);
+      try { localStorage.setItem('view', b.value); } catch {}
+      scrollTo(0, 0);
+    }),
+  );
+  addEventListener('hashchange', () => {  // header, footer and flag links point into the full monitor
+    if (document.documentElement.dataset.view === 'full') return;
+    setView('full');
+    document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  });
+  setView(document.documentElement.dataset.view!);
   // highlight the section in view in the sticky section bar
   const links = [...document.querySelectorAll<HTMLAnchorElement>('.subnav a')];
   const spy = new IntersectionObserver(
@@ -1190,6 +1220,13 @@ const ld = {
   .terminal { margin: 0; padding: 16px 18px; max-height: 480px; overflow: auto; background: #050506; border: 1px solid var(--rule); font: 0.74rem/1.7 var(--mono); color: #c9c3b3; }
   :global(#updated.stale) { color: #e8923a; }
 
+  /* simple view (the default): the answer, the score and the five pillars, each in a line */
+  :global(:root:not([data-view='full']) :is(.ticker, .flag-strip, .unusual, #summary, .readouts, .odds, .subnav, main > .section:not(#pillars-s), .sec-head .num, .full-only, .pillar :is(.meta, .spark, .spark-cap, .inputs))),
+  :global(:root[data-view='full'] .simple-only) { display: none; }
+  :global(:root:not([data-view='full'])) .hero-side { grid-template-columns: minmax(0, 1fr); }
+  .more { padding: 0; font: 600 0.9rem var(--body); color: var(--gold); background: none; border: 0; cursor: pointer; text-align: left; }
+  .more:hover { text-decoration: underline; }
+
   /* phones (last, so it overrides the rules above): fewer boxes, tighter rows */
   @media (max-width: 600px) {
     .hero .lede { font-size: 0.9rem; }
@@ -1260,5 +1297,9 @@ const ld = {
     .steps { grid-template-columns: 1fr; }
     .versions ol { font-size: 0.82rem; }
     .terminal { max-height: 320px; padding: 12px; font-size: 0.66rem; }
+    /* simple view: each pillar's number beside its name */
+    :global(:root:not([data-view='full']) .pillar) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+    :global(:root:not([data-view='full']) .pillar > :not(.card-head, .pv)) { grid-column: 1 / -1; }
+    :global(:root:not([data-view='full']) .pillar .card-head) { margin: 0; }
   }
 </style>
