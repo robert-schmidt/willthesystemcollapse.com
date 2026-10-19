@@ -195,6 +195,41 @@ def now_iso():
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
+def shfe_gold(_, have):
+    """Shanghai Futures Exchange daily settlement of the most-traded gold contract, CNY per gram. One file per trading day
+    (404 on holidays). SHFE allows non-commercial use: only the derived premium is published, never the prices.
+    The first run samples one day a week back to 2013, then every trading day."""
+    day = date.fromisoformat(have[:10]) + timedelta(days=1) if have else date(2013, 1, 2)
+    out = []
+    while day < date.today() + timedelta(days=1):
+        if day.weekday() < 5 and (have or day.weekday() == 2 or day > date.today() - timedelta(days=14)):
+            try:
+                rows = json.loads(get(f'https://www.shfe.com.cn/data/tradedata/future/dailydata/kx{day:%Y%m%d}.dat'))['o_curinstrument']
+                au = [r for r in rows if r['PRODUCTID'].strip() == 'au_f' and str(r['DELIVERYMONTH']).isdigit()]
+                if au:
+                    out.append((str(day), float(max(au, key=lambda r: r['OPENINTEREST'])['SETTLEMENTPRICE'])))
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    raise
+            time.sleep(0.3)  # be gentle with their server
+        day += timedelta(days=1)
+    return out
+
+
+def gold_ny_premium(_):
+    """New York gold futures (Coinbase Derivatives' contract settles on the COMEX price) over spot gold (PAX Gold, which
+    is backed by London bars), minus the cost of carry, %. Both quotes come from Coinbase at the same moment."""
+    fut = [p for p in json.loads(get('https://api.coinbase.com/api/v3/brokerage/market/products?product_type=FUTURE'
+                                     '&contract_expiry_type=EXPIRING'))['products']
+           if p['product_id'].startswith('GOL-') and p['price'] and float(p['volume_24h'] or 0) > 0]
+    f = min(fut, key=lambda p: p['future_product_details']['contract_expiry'])  # front month
+    days = (datetime.fromisoformat(f['future_product_details']['contract_expiry'].replace('Z', '+00:00')) -
+            datetime.now(timezone.utc)).days
+    spot = num(json.loads(get('https://api.exchange.coinbase.com/products/PAXG-USD/ticker'))['price'])
+    # ponytail: carry at a fixed 4% a year; a 1 pp error moves a two-month contract by under 0.2%, blowouts are 1–4%
+    return [(now_iso(), 100 * (float(f['price']) / spot - 1 - 0.04 * days / 365))]
+
+
 def kraken(pair):
     r = json.loads(get(f'https://api.kraken.com/0/public/Ticker?pair={pair}'))['result']
     return [(now_iso(), num(next(iter(r.values()))['c'][0]))]
@@ -323,8 +358,20 @@ SERIES = {
     'V_BITSTAMP_PAXG': (bitstamp, 'paxgusd', LIVE, 'PAX Gold on Bitstamp', 'Bitstamp public API'),
     'V_COINBASE_PAXG': (coinbase, 'PAXG-USD', LIVE, 'PAX Gold on Coinbase', 'Coinbase Exchange public API'),
     'V_KRAKEN_BTC': (kraken, 'XBTUSD', LIVE, 'Bitcoin on Kraken', 'Kraken public API'),
+    'V_GOLD_NY_PREM': (gold_ny_premium, None, LIVE, 'Gold futures (COMEX-settled) over spot, minus carry, %', 'Coinbase public API'),
+    # markets that should agree (the "Unusual right now" box)
+    'SHFE_GOLD': (shfe_gold, None, D, 'Gold futures, Shanghai, most-traded contract (CNY/g; only the premium is shown)',
+                  'Shanghai Futures Exchange (non-commercial use)'),
+    'CP_FIN_3M': (fred, 'DCPF3M', D, '3-month AA financial commercial paper rate', 'Federal Reserve via FRED'),
+    'CP_OLD': (fred, 'WCP3M', W, '3-month commercial paper rate, weekly (to 1997)', 'Federal Reserve via FRED'),
+    'BIS_CREDIT': (fred, 'QUSPAM770A', M, 'Credit to the private non-financial sector, % of GDP', 'Bank for International Settlements via FRED'),
+    'TBILL_3M': (fred, 'DTB3', D, '3-month Treasury bill rate (daily)', 'Federal Reserve via FRED'),
+    'SOFR99': (fred, 'SOFR99', D, 'SOFR, 99th percentile of overnight repo trades', 'Federal Reserve Bank of New York via FRED'),
+    'IORB': (fred, 'IORB', D, 'Interest on reserve balances', 'Federal Reserve via FRED'),
+    'IOER': (fred, 'IOER', W, 'Interest on excess reserves (to July 2021)', 'Federal Reserve via FRED'),
+    'SWAP_LINES': (fred, 'SWPT', D, 'Fed dollar swap lines with foreign central banks', 'Federal Reserve via FRED'),
 }
-INCREMENTAL = {bcra, nbp_gold}  # fetchers that take the last stored date and only fetch what's new
+INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 
 
 def connect(path):
@@ -419,6 +466,10 @@ def snapshot(page, r):
     html = fill(html, 'flag-strip', raw=''.join(
         f'<a class="fchip" href="#flags-s"><i></i>{escape(f["label"])} <b>{escape(f["shown"])}</b></a>' for f in high[:5]) +
         (f'<a class="fchip more" href="#flags-s">+{len(high) - 5} more</a>' if len(high) > 5 else ''))
+    kind = {'record': 'Record', 'move': 'Sudden move', 'gap': 'Markets apart'}  # the same list the page script draws
+    html = fill(html, 'unusual-list', raw=''.join(
+        f'<li><i>{kind[u["kind"]]}</i><span>{escape(u["label"])} <b>{escape(u["shown"])}</b></span><em>{escape(u["note"])}</em></li>'
+        for u in r['unusual']) or '<li class="none">Nothing out of the ordinary: no records, sudden moves or markets pulling apart.</li>')
     # short enough for one line on a phone, like the script's "updated 5 min ago"; the date is in datetime and the JSON-LD
     html = fill(html, 'updated', f"updated {at:%H:%M} UTC", {'datetime': r['updated']})
     html = re.sub(r'"dateModified":"[^"]*"', f'"dateModified":"{r["updated"]}"', html)

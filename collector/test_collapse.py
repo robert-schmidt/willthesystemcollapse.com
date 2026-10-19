@@ -26,4 +26,12 @@ odd = dict(like=20, base=20)
 r = dict(score=30, band=dict(label='Normal'), pillars=dict(stress=20), forecast=dict(probability=5), structural=30,
          structural_rank=dict(pct=25), flags=dict(high=[]), odds=dict(crisis_24m=odd, recession_24m=odd, bear_24m=odd, severe_24m=odd))
 assert 'foundations are solid' in collect.summary(r) and 'no red flags' in collect.summary(r), collect.summary(r)
+# unusual: a level not seen in 20+ years is flagged, a recent dip from a fresh record still counts, a gap is passed through
+db = collect.connect(':memory:')
+C = {'old': dict(label='A', now=('2026-10-01', 5.0), hist={'1990-01': 6.0, '2000-01': 4.0, '2026-09': 4.5}),
+     'dip': dict(label='B', now=('2026-10-01', 9.0), hist={'1990-01': 6.0, '2026-02': 9.5}),
+     'meh': dict(label='C', now=('2026-10-01', 5.0), hist={'2015-01': 6.0})}
+gap = dict(key='g', label='G', unit='pp', value=2.0, date='2026-10-01', since='1997', usual=[0.1, 0.4], unusual=True)
+u = {x['key']: x['note'] for x in score.unusual(db, C, lambda c: '', [gap])}
+assert u == {'old': 'a level last seen in 1990', 'dip': 'near the record set in Feb 2026', 'g': 'usually +0.10 pp to +0.40 pp (since 1997)'}, u
 print('ok')

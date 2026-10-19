@@ -137,10 +137,6 @@ const ld = {
         <p class="lede">A small, independent project. The <a href={REPO} target="_blank" rel="noopener">code is open on GitHub</a> and every number comes from public data. No ads, no affiliate links.</p></header>
       <div class="facts tiles">
         <div>
-          <h3>Why gold?</h3>
-          <p>Gold is nobody’s debt, which is why central banks hold it and why the original site compared gold prices. It is no safe bet either: from its 1980 peak it fell about 70% by 2001.</p>
-        </div>
-        <div>
           <h3>Fair, not alarming</h3>
           <p>The score aims to be neither alarming nor reassuring. The formula changes only when a change does better on data it wasn’t fitted to, and every change is listed under <a href="/#method-s">How the formula evolved</a>. Spotted a mistake? <a href={`${REPO}/issues`} target="_blank" rel="noopener">Open an issue on GitHub</a>.</p>
         </div>
@@ -194,12 +190,12 @@ const ld = {
   .ai ul { display: grid; gap: 8px; margin: 0; padding-left: 1.1em; list-style: square; font-size: 0.9rem; line-height: 1.6; color: #cdc6b6; }
   .ai li::marker { color: var(--c); }
 
-  .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-  @media (max-width: 1200px) { .timeline { grid-template-columns: repeat(3, minmax(0, 1fr)); } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1200px) { .timeline { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 1100px) { .actors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 960px) {
-    .intro, .prose { grid-template-columns: 1fr; }
+    .intro, .prose, .facts { grid-template-columns: 1fr; }
     .prose > * { grid-column: 1; }
   }
   @media (max-width: 640px) {
@@ -207,7 +203,7 @@ const ld = {
     .intro h1 { font-size: 1.9rem; }
     .toc a { padding: 9px 0; font-size: 0.92rem; }
     .prose > * { font-size: 0.92rem; }
-    .actors, .ai, .facts { grid-template-columns: 1fr; }
+    .actors, .ai { grid-template-columns: 1fr; }
     .actors > div, .facts > div, .ai > div { padding: 12px 14px; font-size: 0.86rem; }
     /* timeline as compact rows: year | place + what happened */
     .timeline { grid-template-columns: 1fr; }

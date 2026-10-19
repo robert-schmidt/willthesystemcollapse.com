@@ -8,7 +8,11 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   I want it to be fair." Change weights, bands or inputs only on out-of-sample backtest evidence, and record each change
   in the page's "How the formula evolved" list (and bump `VERSION` in score.py). Rejected so far: model-fitted pillar
   weights, an oil-shock (Hamilton NOPI) input, Fed funds/hikes/real rate/10y−2y in the recession model, claims, permits,
-  lending standards, Sahm and inflation in the recession model, RMS/top-half averaging.
+  lending standards, Sahm and inflation in the recession model, RMS/top-half averaging; in v6 research: more weight on
+  valuations (MV/GDP, CAPE, household equity share: regime markers, not timing), the GHSS R-zone, sudden-move breadth,
+  credit growth or a spread × credit term in the recession model, investors' public warnings (not backtestable).
+  The acceptance rule used for v6 (keep using it): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
+  0; recession and severe ahead-12 down no more than 0.02; ≥ 70 band still ≥ 90% near a crisis; gain in 1973–99 and 2000+.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
 - **Server.** Shared HestiaCP VPS: touch only this site's `willthesystemcollapse` account (and the sister
@@ -22,8 +26,11 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
 
 ## Method in one paragraph
 Each component becomes a percentile vs its own monthly history (expanding window, ≥ 60 months, each input
-forward-filled ≤ 6 months so history matches the live reading). Pillars are theme-balanced means: stress, warning (the
-walk-forward recession model's percentile), money, fiscal. Score = 100·(2·stress + warning + money + fiscal)/5; bands
-0/40/50/60/70/80 were set where historical crisis odds change. The recession model (forecast.py) is a ridge logistic
+forward-filled ≤ 6 months so history matches the live reading; quarterly/annual series placed at their publication month,
+`LAGS` in score.py). Pillars are theme-balanced means: stress (incl. CP − bill and VIX/VIX3M dislocations), warning (the
+walk-forward recession model's percentile), money, fiscal, build-up (BIS 3y Δ private credit/GDP, Baa−10y from 24 months
+earlier). Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical
+crisis odds change (75+ = 1974, 1980, 2008–09 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
+moves, markets that should agree, incl. the SHFE gold premium) without entering the score. The recession model (forecast.py) is a ridge logistic
 regression on the 10y−3m spread, its 18-month low, NFCI, NFCI 6-month change and the excess bond premium, refitted every
 January since 1979 (out-of-sample AUC ≈ 0.90).

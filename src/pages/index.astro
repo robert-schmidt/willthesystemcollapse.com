@@ -52,6 +52,7 @@ const ld = {
         <p class="answer" id="answer" data-band="checking" style="--len:9">CHECKING…</p>
         <p class="lede" id="summary">Reading over 140 public data feeds from central banks, the US Treasury and markets.</p>
         <div class="flag-strip" id="flag-strip"></div>
+        <div class="unusual"><p class="eyebrow">Unusual right now</p><ul id="unusual-list"><li class="none">Checking…</li></ul></div>
       </div>
       <div class="hero-side">
         <div class="card gauge-card">
@@ -99,7 +100,7 @@ const ld = {
     </nav>
 
     <section class="section" id="pillars-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">01</span>The four pillars</p><h2 class="section-title">What the score is made of</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">01</span>The five pillars</p><h2 class="section-title">What the score is made of</h2></div>
         <p class="lede">Each pillar is the average percentile of its inputs against their own history: 90 means worse than 90% of all months on record.</p></header>
       <div class="pillars" id="pillars"></div>
     </section>
@@ -137,6 +138,7 @@ const ld = {
             <button class="chip" data-series="recession_risk">Recession probability</button>
             <button class="chip" data-series="money">Inflation &amp; money</button>
             <button class="chip" data-series="fiscal">Debt &amp; fragility</button>
+            <button class="chip" data-series="buildup">Build-up</button>
           </div>
           <p class="legend small muted">
             <span><span class="key crisis"></span> crisis episodes</span><span><span class="key rec"></span> US recessions (NBER)</span><span><span class="key bear"></span> start of a 20% stock-market fall</span>
@@ -190,7 +192,7 @@ const ld = {
         <div class="card">
           <div class="card-head"><h3>Pre-crisis checklist</h3><span class="meta">today vs 6 months before past crises</span></div>
           <table class="mini" id="lead-table"></table>
-          <p class="small muted">AUC: how well a high reading flagged an event starting within 12 months (0.5 = coin flip). We tested these and more inside the score itself: none improved it, because the four pillars already carry their information, so they're shown here as context. The recession probability didn't move either: adding claims, permits, lending standards, unemployment or inflation to its model left its reading between 7% and 9% (tested October 2026) and none improved its out-of-sample record.</p>
+          <p class="small muted">AUC: how well a high reading flagged an event starting within 12 months (0.5 = coin flip). We tested these and more inside the score itself: none improved it, because the pillars already carry their information, so they're shown here as context. The recession probability didn't move either: adding claims, permits, lending standards, unemployment or inflation to its model left its reading between 7% and 9% (tested October 2026) and none improved its out-of-sample record.</p>
         </div>
       </div>
     </section>
@@ -235,6 +237,11 @@ const ld = {
         </div>
         <div class="card"><div class="card-head"><h3>Gold in ten currencies</h3><span class="meta">1-year change</span></div><table class="mini" id="ccy-table"></table></div>
       </div>
+      <div class="card">
+        <div class="card-head"><h3>Markets that should agree</h3><span class="meta">today vs their usual gap</span></div>
+        <table class="mini" id="pairs-table"></table>
+        <p class="small muted">Prices that arbitrage or the Fed normally hold together. "Usual" is the middle half of past days; a gap wider than on 99% of them goes to the top of the page. Shanghai uses the Shanghai Futures Exchange's most-traded contract (we show only the premium, as its terms allow) against the National Bank of Poland's fix; New York uses Coinbase's COMEX-settled gold future against PAX Gold. Shown for awareness: none of these is in the score.</p>
+      </div>
     </section>
 
     <section class="section" id="debt-s">
@@ -276,12 +283,12 @@ const ld = {
           <p class="muted">A VIX of 30 or a debt ratio of 120% means little on its own. Each measure is turned into a percentile: the share of all past months in which it was lower. 90 means "higher than 90% of history".</p>
         </div>
         <div class="card step">
-          <span class="step-n">3</span><h3>Four questions</h3>
-          <p class="muted"><strong>Stress now</strong>: is a crisis happening? <strong>Early warning</strong>: is a recession coming? <strong>Inflation &amp; money</strong>: is money losing value? <strong>Debt &amp; fragility</strong>: how much could break? Inside each pillar, inputs measuring the same thing are averaged first, so no theme is counted twice.</p>
+          <span class="step-n">3</span><h3>Five questions</h3>
+          <p class="muted"><strong>Stress now</strong>: is a crisis happening? <strong>Early warning</strong>: is a recession coming? <strong>Inflation &amp; money</strong>: is money losing value? <strong>Debt &amp; fragility</strong>: how much could break? <strong>Build-up</strong>: are excesses building? Inside each pillar, inputs measuring the same thing are averaged first, so no theme is counted twice.</p>
         </div>
         <div class="card step">
           <span class="step-n">4</span><h3>One score, two readings</h3>
-          <p class="muted">Score = (2 × stress + warning + money + fiscal) ÷ 5. Stress counts double because it is the only pillar that says a crisis is actually happening. "Crisis now" = (2 × stress + warning) ÷ 3; "structural risk" = the average of the two slow pillars.</p>
+          <p class="muted">Score = (2 × stress + warning + money + fiscal + build-up) ÷ 6. Stress counts double because it is the only pillar that says a crisis is actually happening. "Crisis now" = (2 × stress + warning) ÷ 3; "structural risk" = the average of the three slow pillars.</p>
         </div>
       </div>
       <div class="grid-2">
@@ -298,13 +305,14 @@ const ld = {
         </div>
       </div>
       <div class="card versions">
-        <div class="card-head"><h3>How the formula evolved</h3><span class="meta">v1–v5 October 2026 · each backtested from 1973</span></div>
+        <div class="card-head"><h3>How the formula evolved</h3><span class="meta">v1–v6 October 2026 · each backtested from 1973</span></div>
         <ol>
           <li><strong>v1 · Market stress.</strong> Stress indices, credit spreads, VIX, plus a blend of the yield curve, debt and gold. Good at saying a crisis is happening; weak at saying one is coming.</li>
           <li><strong>v2 · The recession model.</strong> The yield curve and financial conditions became a proper forecasting model, refitted every year on outcomes already known. Recession warning a year ahead improved to an AUC of about 0.9.</li>
           <li><strong>v3 · Inflation, the Fed and debt.</strong> Added official and alternative inflation, inflation expectations, money growth, the dollar, the deficit, r − g, foreign debt, G7 debt and bond sell-offs, plus unemployment. Tested and rejected for the forecast: the Fed funds rate, its pace of hikes, the real policy rate and the 10-year minus 2-year curve, which added nothing the 10-year minus 3-month curve didn't already know (it is, in effect, the market's read of Fed policy). Debt measures don't time crises at all, so they shape structural risk rather than the warning.</li>
-          <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added stock-market value against GDP (a record 255% at the time) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
+          <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added the value of US company shares against GDP (a record 255% at the time, including privately held firms; about 210% for listed companies alone) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
           <li><strong>v5 · Fairer averaging and calibrated labels.</strong> Inputs that measure the same thing are now averaged together first (eight consumer-inflation measures had been outvoting producer prices, expectations and the dollar; four stress indices outvoted the rest), which improved crisis warning a year ahead from 0.73 to 0.75. Bands are now set where the historical odds actually change, and the page shows those odds: the old "calm" label covered months whose odds were average. Tested and rejected: weights fitted by a model (worse out of sample: a dozen crises are too few to fit weights on) and an oil-shock signal (no added power; oil was then just below its three-year high).</li>
+          <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which keeps it to 1974, 1980 and 2008–09. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
           <li><strong>Research after v5 · signals before crises.</strong> An event study of 20 crisis and crash starts showed market gauges (stress indices, VIX, credit spreads, stock trends) don't move until the month trouble hits; if anything, volatility is unusually low three months before. Building permits, bank lending standards and jobless claims did move earlier and are shown in the pre-crisis checklist, but adding them to the score or the recession model didn't improve either out of sample, so the formula is unchanged.</li>
         </ol>
       </div>
@@ -330,12 +338,13 @@ const ld = {
   const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
   const BAND_COLORS: Record<string, string> = { calm: '#6fbf8e', normal: '#a9c46c', elevated: '#d9b45a', high: '#e8923a', crisis: '#e05a47', systemic: '#b3261e' };
   const PILLAR_COPY: Record<string, [string, string]> = {
-    stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown and unemployment.'],
+    stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown, unemployment, and funding dislocations: banks paying up to borrow, near-term fear above longer-term.'],
     warning: ['Early warning', 'Is a recession coming within a year? The yield-curve and financial-conditions model, as a percentile of its own history.'],
     money: ['Inflation & money', 'Is money losing value? Official and alternative inflation, expectations, money growth, the dollar and gold.'],
     fiscal: ['Debt & fragility', 'How much could break? Government and corporate debt, deficits, the interest bill, r − g, foreign debt, stock valuations and bond sell-offs.'],
+    buildup: ['Build-up', 'Are excesses building? How fast private debt has outgrown the economy over three years, and how cheap credit was two years ago: the two signals that come before banking crises.'],
   };
-  const PILLARS = ['stress', 'warning', 'money', 'fiscal'];
+  const PILLARS = ['stress', 'warning', 'money', 'fiscal', 'buildup'];
   const money = (v: number, d = 2) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   const num = (v: number, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   const pctf = (v: number, d = 1) => (v > 0 ? '+' : '') + (100 * v).toFixed(d) + '%';
@@ -371,7 +380,7 @@ const ld = {
   }
 
   // ---------- pillars ----------
-  const PILLAR_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', money: '#f0a35e', fiscal: '#c89cf0' };
+  const PILLAR_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', money: '#f0a35e', fiscal: '#c89cf0', buildup: '#6fc8c0' };
   function spark(vals: (number | null)[], color: string) {
     const v = vals.filter((x) => x != null) as number[];
     if (v.length < 2) return '';
@@ -382,7 +391,7 @@ const ld = {
   function drawPillars(d: any) {
     const last10 = (k: string) => d.history[k].slice(-120);
     const open = matchMedia('(min-width: 761px)').matches ? ' open' : '';  // phones start with the input lists folded
-    $('pillars').innerHTML = PILLARS
+    $('pillars').innerHTML = PILLARS.filter((p) => p in d.pillars)  // a v5 JSON (mid-deploy) has no build-up pillar
       .map((p) => {
         const [title, text] = PILLAR_COPY[p];
         const v = d.pillars[p];
@@ -516,7 +525,7 @@ const ld = {
       cur?.setAttribute('visibility', 'visible');
       tip.hidden = false;
       tip.style.left = Math.min(r.width - 210, Math.max(0, clientX - r.left + 12)) + 'px';
-      tip.innerHTML = `<b>${monthName(m)}</b><br>Score <b>${h.score[i].toFixed(0)}</b> · ${esc(bandOf(h.score[i], d.bands).label)}<br>Crisis now ${h.acute[i].toFixed(0)} · Structural ${h.structural[i].toFixed(0)}<br>Stress ${h.stress[i].toFixed(0)} · Warning ${h.warning[i].toFixed(0)} · Money ${h.money[i].toFixed(0)} · Fiscal ${h.fiscal[i].toFixed(0)}${h.recession_risk[i] != null ? `<br>Recession probability ${h.recession_risk[i].toFixed(0)}%` : ''}${crisis ? `<br><span class="gold">${esc(crisis.label)}</span>` : ''}`;
+      tip.innerHTML = `<b>${monthName(m)}</b><br>Score <b>${h.score[i].toFixed(0)}</b> · ${esc(bandOf(h.score[i], d.bands).label)}<br>Crisis now ${h.acute[i].toFixed(0)} · Structural ${h.structural[i].toFixed(0)}<br>Stress ${h.stress[i].toFixed(0)} · Warning ${h.warning[i].toFixed(0)} · Money ${h.money[i].toFixed(0)} · Fiscal ${h.fiscal[i].toFixed(0)}${h.buildup ? ` · Build-up ${h.buildup[i].toFixed(0)}` : ''}${h.recession_risk[i] != null ? `<br>Recession probability ${h.recession_risk[i].toFixed(0)}%` : ''}${crisis ? `<br><span class="gold">${esc(crisis.label)}</span>` : ''}`;
     };
     const hide = () => {
       tip.hidden = true;
@@ -563,7 +572,7 @@ const ld = {
         return `<article class="case card" style="--c:${col}">
           <div class="case-top"><p class="label">${monthName(c.month)}</p><p class="cscore"><b>${c.score}</b><span>${esc(c.band)}</span></p></div>
           <h3>${esc(c.title)}</h3><p class="muted small">${esc(c.text)}</p>
-          <dl>${m('acute', 'Crisis now')}${m('structural', 'Structural')}${m('stress', 'Stress')}${m('warning', 'Warning')}${m('money', 'Money')}${m('fiscal', 'Fiscal')}</dl>
+          <dl>${m('acute', 'Crisis now')}${m('structural', 'Structural')}${m('stress', 'Stress')}${m('warning', 'Warning')}${m('money', 'Money')}${m('fiscal', 'Fiscal')}${m('buildup', 'Build-up')}</dl>
           <p class="rp">${c.recession_risk != null ? `Recession probability <b>${c.recession_risk}%</b>` : 'Before the recession model had enough history'}</p></article>`;
       })
       .join('');
@@ -603,6 +612,10 @@ const ld = {
       $('tug').setAttribute('data-label', `Spread ${money(sp.usd)} (${sp.pct.toFixed(2)}%) · metal flows to the dearer venue`);
       if (!$('lane').children.length) $('lane').innerHTML = Array.from({ length: 6 }, (_, i) => `<span style="animation-delay:${-i}s"></span>`).join('');
     }
+    const gap = (g: any, v: number) => g.unit === '%' ? `${v >= 0 ? '+' : ''}${v.toFixed(2)}%` : g.unit === 'pp' ? `${v >= 0 ? '+' : ''}${v.toFixed(2)} pp` : g.unit === 'x' ? v.toFixed(2) : `$${v.toFixed(0)}bn`;
+    $('pairs-table').innerHTML = `<thead><tr><th></th><th>Now</th><th>Usual</th><th></th></tr></thead><tbody>` + (d.pairs || [])
+      .map((g: any) => `<tr><th>${esc(g.label)}</th><td class="${g.unusual ? 'down' : ''}">${gap(g, g.value)}</td><td class="muted">${g.usual ? `${gap(g, g.usual[0])} to ${gap(g, g.usual[1])}` : '—'}</td><td class="${g.unusual ? 'down' : 'muted'}">${g.unusual ? 'unusual' : 'normal'}</td></tr>`)
+      .join('') + '</tbody>';
     $('ccy-table').innerHTML = m.currencies
       .map((c: any) => `<tr><th>${c.ccy}</th><td>${c.price.toLocaleString('en-US', { maximumFractionDigits: c.price > 1000 ? 0 : 2 })}</td><td class="${c.change_1y >= 0 ? 'up' : 'down'}">${pctf(c.change_1y)}</td></tr>`)
       .join('');
@@ -778,6 +791,9 @@ const ld = {
     const ro = (id: string, v: number) => { $(id).textContent = v.toFixed(0); $(id).style.color = BAND_COLORS[bandOf(v, d.bands).key]; };
     $('flag-strip').innerHTML = d.flags.high.slice(0, 5).map((f: any) => `<a class="fchip" href="#flags-s"><i></i>${esc(f.label)} <b>${esc(f.shown)}</b></a>`).join('') +
       (d.flags.high.length > 5 ? `<a class="fchip more" href="#flags-s">+${d.flags.high.length - 5} more</a>` : '');
+    const KIND: Record<string, string> = { record: 'Record', move: 'Sudden move', gap: 'Markets apart' };
+    $('unusual-list').innerHTML = (d.unusual || []).map((u: any) => `<li><i>${KIND[u.kind]}</i><span>${esc(u.label)} <b>${esc(u.shown)}</b></span><em>${esc(u.note)}</em></li>`).join('') ||
+      '<li class="none">Nothing out of the ordinary: no records, sudden moves or markets pulling apart.</li>';  // collect.py bakes the same markup
     ro('ro-acute', d.acute);
     ro('ro-structural', d.structural);
     ro('ro-stag', d.stagflation);
@@ -884,6 +900,13 @@ const ld = {
   :global(.fchip) { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 10px; font-size: 0.76rem; line-height: 1.3; white-space: nowrap; text-decoration: none; color: var(--ink); background: rgba(224, 90, 71, 0.08); border: 1px solid rgba(224, 90, 71, 0.28); }
   :global(.fchip i) { align-self: center; width: 6px; height: 6px; background: #e05a47; }
   :global(.fchip b) { font: 600 0.74rem var(--mono); color: #f08a78; }
+  .unusual { margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(217, 180, 90, 0.35); background: rgba(217, 180, 90, 0.06); }
+  .unusual ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 0.84rem; line-height: 1.45; }
+  :global(.unusual li) { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 2px 10px; }
+  :global(.unusual li i) { grid-row: span 2; font: 600 0.66rem/1.9 var(--body); font-style: normal; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+  :global(.unusual li.none) { display: block; color: var(--muted); }
+  :global(.unusual li b) { font: 600 0.8rem var(--mono); color: var(--ink); }
+  :global(.unusual li em) { font-style: normal; color: var(--muted); font-size: 0.78rem; }
   :global(.fchip.more) { background: transparent; border-color: var(--rule); color: var(--muted); }
   .hero-side { display: grid; }
   .gauge-card { text-align: center; padding-bottom: 16px !important; }
@@ -934,8 +957,9 @@ const ld = {
   #pillars-s { border-top: 0; }
 
   /* pillars */
-  .pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(12px, 1.2vw, 16px); align-items: start; }
-  @media (max-width: 1400px) { .pillars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pillars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(12px, 1.2vw, 16px); align-items: start; }
+  @media (max-width: 1500px) { .pillars { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 1100px) { .pillars { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 760px) { .pillars { grid-template-columns: 1fr; } }
   :global(.pillar) { border-top: 2px solid var(--pc) !important; }
   :global(.pv) { font: 600 2.6rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--pc); }
@@ -1009,6 +1033,7 @@ const ld = {
   :global(#history .line.acute) { stroke: #e05a47; }
   :global(#history .line.structural), :global(#history .line.fiscal) { stroke: #c89cf0; }
   :global(#history .line.stagflation), :global(#history .line.money) { stroke: #f0a35e; }
+  :global(#history .line.buildup) { stroke: #6fc8c0; }
   :global(#history .now) { fill: var(--band); stroke: var(--bg); stroke-width: 2; }
   :global(#history .cursor) { stroke: var(--ink); stroke-dasharray: 3 3; }
   .tip { position: absolute; top: 18px; width: 220px; padding: 10px 12px; background: rgba(8, 8, 10, 0.96); border: 1px solid var(--rule); font-size: 0.78rem; line-height: 1.5; pointer-events: none; }

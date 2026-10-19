@@ -1,45 +1,53 @@
 """System stress score for willthesystemcollapse.com (method, data and backtest are explained on the page).
 
-Four pillars, each 0–1 (higher = more stress); score = 100 × (2·stress + warning + money + fiscal) / 5.
-  stress    — is a crisis happening? Average percentile of 8 stress measures (NFCI, OFR, St. Louis Fed, ECB CISS, VIX,
-              Baa credit spread, excess bond premium, US stock drawdown) against their own monthly history.
+Five pillars, each 0–1 (higher = more stress); score = 100 × (2·stress + warning + money + fiscal + build-up) / 6.
+  stress    — is a crisis happening? Stress indices (NFCI, OFR, St. Louis Fed, ECB CISS), VIX and the stock drawdown,
+              credit spreads, unemployment, and dislocations (commercial paper over T-bills, VIX over VIX3M).
   warning   — is a recession coming within 12 months? Percentile of the forecast.py probability (yield curve, deepest recent
               inversion, financial conditions and their change, excess bond premium).
   money     — is money losing value? Official and alternative inflation, expectations, money growth, the dollar, gold.
   fiscal    — how much could break? Debt, deficits, the interest bill, r − g, foreign debt, G7 debt, bond sell-offs,
               corporate leverage, stock valuations and the inflation-adjusted gold price.
+  buildup   — are excesses building? Private credit growth over 3 years (BIS) and how cheap credit was two years ago.
 History uses expanding-window percentiles and a walk-forward model: what the gauge would have said at the time.
 """
 import bisect, math
+from itertools import groupby
 import forecast
 from datetime import datetime, timezone, date
 
-VERSION = 5  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
+VERSION = 6  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
 # v4 + stock valuations and corporate leverage, forward-looking r − g, debt growth after inflation, history = live inputs;
-# v5 theme-balanced pillars, bands calibrated on historical odds
-WEIGHTS = {'stress': 2, 'warning': 1, 'money': 1, 'fiscal': 1}
-# Bands calibrated on historical odds (v5 backtest, 1973–2026): below 40, a crisis was under way or began within 12 months
-# in under 20% of months; 40–50, 19–38% (below the 44% average); 50–60, 55–57% (above it); 60–70, 67–78%; 70–80, 92%+;
-# 80+ only in 1973–75, 1980 and 2008. The page shows the odds themselves next to the label.
+# v5 theme-balanced pillars, bands calibrated on historical odds; v6 + build-up pillar (credit boom, credit sentiment),
+# funding dislocations in stress, history placed at each series' publication date
+WEIGHTS = {'stress': 2, 'warning': 1, 'money': 1, 'fiscal': 1, 'buildup': 1}
+# Quarterly and annual data enter the history when it was published, not at the quarter it describes (months after the
+# observation date): Z.1 financial accounts ~10 weeks after quarter end, GDP's advance estimate a month after, BIS ~6 months.
+LAGS = {'EQUITY_MV': 5, 'CORP_DEBT': 5, 'HH_DEBT': 5, 'NIIP': 5, 'GDP': 3, 'DEBT_GDP': 3, 'INTEREST': 4, 'RECEIPTS': 4,
+        'FED_DEBT_LEVEL': 3, 'DEFICIT_GDP': 9, 'BIS_CREDIT': 8}
+# Bands calibrated on historical odds (v6 backtest, 1973–2026): below 40, a crisis was under way or began within 12 months
+# in 9% of months; 40–50, 41% (below the 45% average); 50–60, 64% (above it); 60–70, 86%; 70+, all of them. 75+ only in
+# 1974, 1980 and 2008–09, the episodes that needed system-wide rescues. The page shows the odds next to the label.
 BANDS = [  # (from, key, answer, label)
     (0, 'calm', 'NO', 'Calm'),
     (40, 'normal', 'NO', 'Normal'),
     (50, 'elevated', 'NOT YET', 'Elevated'),
     (60, 'high', 'NOT YET', 'High stress'),
     (70, 'crisis', 'WOBBLING', 'Crisis'),
-    (80, 'systemic', 'YES', 'Systemic breakdown'),
+    (75, 'systemic', 'YES', 'Systemic breakdown'),
 ]
 # Inputs that measure the same thing are averaged together first, so one theme with many variants (8 consumer-inflation
 # measures, 4 financial-stress indices) can't outvote the others: pillar = mean of its themes.
 THEMES = {
     'stress': {'stress indices': ['nfci', 'ofr', 'stlfsi', 'ciss'], 'equity fear': ['vix', 'drawdown'], 'credit': ['credit', 'ebp'],
-               'jobs': ['unemp']},
+               'jobs': ['unemp'], 'dislocations': ['cp_bill', 'vix_curve']},
     'money': {'consumer inflation': ['cpi', 'core_cpi', 'pce', 'sticky', 'median', 'trim_cpi', 'trim_pce', 'mct'], 'pipeline': ['ppi'],
               'momentum': ['accel'], 'expectations': ['exp10', 'exp5y5y'], 'money growth': ['m2'], 'dollar': ['usd_fall'],
               'gold': ['gold_mom']},
     'fiscal': {'government debt': ['debt_gdp', 'g7_debt'], 'deficit': ['deficit'], 'interest': ['interest', 'r_g'],
                'debt growth': ['debt_growth'], 'external': ['niip'], 'private leverage': ['corp_debt'], 'valuation': ['valuation'],
                'trust in paper': ['real_gold'], 'bond market': ['bond_selloff']},
+    'buildup': {'credit boom': ['boom'], 'credit sentiment': ['sentiment']},
 }
 SEVERE = ['1973-11', '1979-10', '1981-08', '2007-08', '2020-02']  # crisis starts that needed system-wide rescues
 CRISES = [
@@ -58,7 +66,7 @@ CRISES = [
     ('2023-03', '2023-05', 'SVB and regional banks'),
 ]
 MIN_HIST = 60  # months of history before a component counts in the backtest
-OZ_T = 31.1034768  # tonnes per million troy ounces
+OZ_T = 31.1034768  # tonnes per million troy ounces (and grams per ounce)
 
 
 # ---- series helpers ----
@@ -129,7 +137,7 @@ def pct(sorted_vals, v):
 def components(db):
     today = date.today().strftime('%Y-%m')
     months = span('1950-01', today)
-    M = lambda k, how='last': monthly(db, k, how)
+    M = lambda k, how='last': {shift(m, LAGS.get(k, 0)): v for m, v in monthly(db, k, how).items()}
     baa, gs10, tb3, cpi, ff, unr = M('BAA'), M('GS10'), M('TB3MS'), M('CPI'), M('FEDFUNDS'), M('UNRATE')
     gold_m, eq, gdp = M('GOLD_M'), M('EQ_US'), ffill(M('GDP'), months, 4)
     yoy = lambda s, k=12: {m: s[m] / s[shift(m, -k)] - 1 for m in s if shift(m, -k) in s and s[shift(m, -k)]}
@@ -225,7 +233,7 @@ def components(db):
     add('debt_growth', 'Federal debt growth after inflation, per year (5y)', 'fiscal', growth, tail(growth), 'FED_DEBT_LEVEL', 'ratio')
     # how stretched private balance sheets and stock prices are
     eqv = {m: v / 1000 / gdp[m] for m, v in ffill(M('EQUITY_MV'), months, 4).items() if m in gdp}
-    add('valuation', 'US stock market value, % of GDP', 'fiscal', eqv, tail(eqv), 'EQUITY_MV', 'ratio')
+    add('valuation', 'US company shares, listed and private, % of GDP', 'fiscal', eqv, tail(eqv), 'EQUITY_MV', 'ratio')
     corp = {m: v / 1000 / gdp[m] for m, v in ffill(M('CORP_DEBT'), months, 4).items() if m in gdp}
     add('corp_debt', 'Corporate debt, % of GDP', 'fiscal', corp, tail(corp), 'CORP_DEBT', 'ratio')
     ext = {m: -niip[m] / 1000 / gdp[m] for m in niip if m in gdp}
@@ -236,6 +244,29 @@ def components(db):
     sell = {m: gs10[m] - gs10[shift(m, -3)] for m in gs10 if shift(m, -3) in gs10}
     add('bond_selloff', '10-year yield, 3-month change', 'fiscal', sell, (y_d, y10 - value_at(db, 'DGS10', days_before(y_d, 91))),
         'DGS10', 'pp')
+    # funding dislocations (monthly worst day): banks' 3-month borrowing cost over T-bills, and near-term fear over 3-month
+    S = lambda k: rows(db, k)
+    mmax = lambda pts: {m: max(v for d, v in g) for m, g in groupby(pts, key=lambda p: p[0][:7])}
+    bill = dict(S('TBILL_3M'))
+    week_bill = lambda d: [bill[x] for x in (days_before(d, k) for k in range(7)) if x in bill]
+    old = [(d, v - sum(b) / len(b)) for d, v in S('CP_OLD') if (b := week_bill(d))]  # weekly averages, 1971–97
+    new = [(d, v - bill[d]) for d, v in S('CP_FIN_3M') if d in bill]  # AA financial paper, daily from 1997
+    if old and new:  # (a source not fetched yet leaves its input out rather than failing the whole report)
+        lap = [v for d, v in old if d >= new[0][0]], [v for d, v in new if d <= old[-1][0]]
+        adj = sum(lap[0]) / len(lap[0]) - sum(lap[1]) / len(lap[1])  # the two series overlap in 1997; level the older one
+        cp = mmax([(d, v - adj) for d, v in old if d < new[0][0]] + new)
+        add('cp_bill', 'Commercial paper over T-bills, worst day this month', 'stress', cp, (new[-1][0], cp[max(cp)]), 'CP_FIN_3M', 'pp')
+    vix3m = dict(S('VIX3M'))
+    vr = mmax([(d, v / vix3m[d]) for d, v in S('VIX') if d in vix3m])
+    add('vix_curve', 'VIX over VIX3M (above 1: fear is front-loaded), worst day this month', 'stress', vr,
+        (max(vix3m), vr[max(vr)]), 'VIX3M', 'x')
+    # build-up: how fast private debt outgrew the economy over 3 years, and how cheap credit was two years ago
+    bis = ffill(M('BIS_CREDIT'), months, 4)
+    boom = {m: bis[m] - bis[shift(m, -36)] for m in bis if shift(m, -36) in bis}
+    if boom:
+        add('boom', 'Private credit growth, 3 years (pp of GDP, BIS)', 'buildup', boom, tail(boom), 'BIS_CREDIT', 'pp_gdp')
+    cheap = {shift(m, 24): -v for m, v in ffill(C['credit']['hist'], months, 6).items() if shift(m, 24) <= today}  # low then = risk now
+    add('sentiment', 'Baa credit spread two years ago (low = complacency)', 'buildup', cheap, tail(cheap), 'BAA', 'neg_pp')
 
     for c in C.values():  # carry each input's latest value forward (≤ 6 months), as the live reading does
         c['hist'] = ffill(c['hist'], months, 6)
@@ -252,10 +283,11 @@ def components(db):
 
 
 def balanced(pillar, pcts):
-    """Theme-balanced pillar value from {component: percentile}; None if fewer than two themes have data."""
+    """Theme-balanced pillar value from {component: percentile}; None if fewer than two themes have data (one for the
+    two-theme build-up pillar)."""
     themes = [[pcts[k] for k in keys if k in pcts] for keys in THEMES[pillar].values()]
     themes = [sum(t) / len(t) for t in themes if t]
-    return sum(themes) / len(themes) if len(themes) >= 2 else None
+    return sum(themes) / len(themes) if len(themes) >= min(2, len(THEMES[pillar]) - 1) else None
 
 
 def expanding(hist, months):
@@ -272,7 +304,7 @@ def history(C, warn, months):
     """Monthly pillar and score history since 1973 from expanding-window percentiles (no look-ahead)."""
     exp = {k: expanding(c['hist'], months) for k, c in C.items()}
     P = {p: {} for p in WEIGHTS}
-    for p in ('stress', 'money', 'fiscal'):
+    for p in [p for p in WEIGHTS if p != 'warning']:
         keys = [k for k, c in C.items() if c['pillar'] == p]
         for m in months:
             v = balanced(p, {k: exp[k][m] for k in keys if m in exp[k]})
@@ -287,7 +319,7 @@ def history(C, warn, months):
 def views(P, H):
     """The two headline readings that make up the score, plus the stagflation index."""
     A = {m: 100 * (2 * P['stress'][m] + P['warning'][m]) / 3 for m in H}
-    S = {m: 100 * (P['money'][m] + P['fiscal'][m]) / 2 for m in H}
+    S = {m: 100 * (P['money'][m] + P['fiscal'][m] + P['buildup'][m]) / 3 for m in H}
     SI = {m: 100 * (P['money'][m] + P['warning'][m]) / 2 for m in H}
     return A, S, SI
 
@@ -390,7 +422,8 @@ def shown(c, real80):
     v, u = c['now'][1], c['unit']
     return {'idx': f'{v:.2f}', 'idx3': f'{v:.3f}', 'pts': f'{v:.1f}', 'pp': f'{v:+.2f} pp', 'ratio': f'{100 * v:.1f}%',
             'ratio_pp': f'{100 * v:+.1f} pp', 'pct': f'{v:.1f}%', 'log': f'{100 * (math.exp(v) - 1):+.1f}%',
-            'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs 1980 peak'}[u]
+            'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs 1980 peak',
+            'pp_gdp': f'{v:+.1f} pp', 'neg_pp': f'{-v:.2f} pp', 'x': f'{v:.2f}'}[u]
 
 
 def hyperinflation(db, C):
@@ -410,6 +443,93 @@ def hyperinflation(db, C):
     out = [dict(label=l, value=round(v, 2), threshold=t, met=(v <= t) if t < 0 else (v >= t)) for l, v, t, _ in rows]
     out.append(dict(label='Government debt owed in a foreign currency', value=0, threshold=None, met=False,
                     note='US federal debt is issued in dollars'))
+    return out
+
+
+# daily markets watched for sudden moves in either direction: (series, label, log change?)
+MOVERS = [('VIX', 'Stock-market fear gauge (VIX)', True), ('BAA10Y', 'Corporate credit spread (Baa)', False),
+          ('DGS10', '10-year Treasury yield', False), ('DGS30', '30-year Treasury yield', False),
+          ('USD', 'Dollar index (broad)', True), ('GOLD', 'Gold', True), ('SILVER', 'Silver', True),
+          ('OIL', 'Oil (WTI)', True), ('NIKKEI', 'Nikkei 225', True), ('BTC', 'Bitcoin', True)]
+MOVE_DAYS, MOVE_Q, RECORD_YEARS = 5, 0.995, 20
+mon = lambda m: datetime.strptime(m, '%Y-%m').strftime('%b %Y')
+
+
+def pairs(db):
+    """Markets that normally agree, and how far apart they are today against their own daily history. Unusual = beyond
+    99% of past days (both ways for gold), or past a fixed line where the history is too short or crisis-heavy."""
+    S = lambda k: dict(rows(db, k))
+    shfe, nbp, cny, usd = S('SHFE_GOLD'), S('GOLD_NBP'), S('EUR_CNY'), S('EUR_USD')
+    vix, vix3m, sofr99 = S('VIX'), S('VIX3M'), S('SOFR99')
+    floor = {**S('IOER'), **S('IORB')}
+    floor_at = lambda d: floor.get(d) or value_at(db, 'IORB' if d >= '2021-07-29' else 'IOER', d)
+    cp, bill = S('CP_FIN_3M'), S('TBILL_3M')
+    items = [  # key, label, unit, {date: gap}, two-sided?, fixed line (None = 99th percentile)
+        ('gold_shanghai', 'Gold, Shanghai over London', '%',
+         {d: 100 * (v / (cny[d] / usd[d]) * OZ_T / nbp[d] - 1) for d, v in shfe.items() if d in nbp and d in cny and d in usd},  # CNY/g → USD/oz
+         True, None),
+        ('gold_ny', 'Gold, New York futures over London spot (after carry)', '%', S('V_GOLD_NY_PREM'), True, 1.0),
+        ('cp_bill', 'Bank borrowing cost: commercial paper over T-bills', 'pp',
+         {d: v - bill[d] for d, v in cp.items() if d in bill}, False, None),
+        ('repo', 'Overnight repo, 99th-percentile trade over the Fed’s reserve rate', 'pp',
+         {d: v - floor_at(d) for d, v in sofr99.items() if floor_at(d) is not None}, False, None),
+        ('vix_curve', 'Fear now vs in 3 months (VIX ÷ VIX3M; above 1 = inverted)', 'x',
+         {d: vix[d] / v for d, v in vix3m.items() if d in vix}, False, None),
+        ('swap_lines', 'Fed dollar loans to foreign central banks (swap lines)', '$bn',
+         {d: v / 1000 for d, v in S('SWAP_LINES').items()}, False, 10.0),
+    ]
+    out = []
+    for key, label, unit, h, both, line in items:
+        if not h:
+            continue
+        d = max(h)
+        now, past = h[d], sorted(v for k, v in h.items() if k < d)
+        if len(past) < 250 and line is None:
+            continue
+        q = lambda p: past[int(p * (len(past) - 1))] if past else None
+        hi, lo = (line, -line if both else None) if line is not None else (q(.99), q(.01) if both else None)
+        out.append(dict(key=key, label=label, unit=unit, value=round(now, 3), date=d[:10], since=min(h)[:4],
+                        usual=[round(q(.25), 3), round(q(.75), 3)] if len(past) >= 20 else None,
+                        unusual=now >= hi or (lo is not None and now <= lo)))
+    return out
+
+
+def unusual(db, C, show, gaps):
+    """What's out of the ordinary right now: score inputs at their highest in 20+ years, and weekly market moves bigger
+    than 99.5% of all weekly moves on record. Raises awareness; the score itself only sees the inputs."""
+    out = []
+    for k, c in C.items():
+        if k == 'sentiment':  # its reading is two years old by design: not news
+            continue
+        (d, v), h = c['now'], c['hist']
+        year_ago = shift(d[:7], -12)  # a dip from last month's peak shouldn't hide a level not seen in decades
+        older = [m for m, x in h.items() if x > v and m < year_ago]
+        recent = [m for m, x in h.items() if x > v and year_ago <= m < d[:7]]
+        if older and int(max(older)[:4]) > int(d[:4]) - RECORD_YEARS:
+            continue
+        note = (f'a level last seen in {max(older)[:4]}' if older else
+                f'near the record set in {mon(max(recent, key=h.get))}' if recent else f'highest on record (data from {min(h)[:4]})')
+        out.append(dict(kind='record', key=k, label=c['label'], shown=show(c), date=d[:10], note=note))
+    for key, label, log in MOVERS:
+        r = [x for x in rows(db, key) if x[1] > 0 or not log]  # WTI went below zero in April 2020
+        if len(r) < 1000:
+            continue
+        v = [x for _, x in r]
+        ch = [math.log(v[i] / v[i - MOVE_DAYS]) if log else v[i] - v[i - MOVE_DAYS] for i in range(MOVE_DAYS, len(v))]
+        now, past = ch[-1], ch[:-MOVE_DAYS]  # past: weekly moves that don't overlap this one
+        if abs(now) < sorted(map(abs, past))[int(MOVE_Q * len(past))]:
+            continue
+        bigger = [i for i, x in enumerate(past) if (x >= now if now > 0 else x <= now)]
+        shown_ = f'{100 * (math.exp(now) - 1):+.1f}%' if log else f'{now:+.2f} pp'
+        word = 'rise' if now > 0 else 'fall'
+        out.append(dict(kind='move', key=key, label=label, shown=f'{shown_} in a week', date=r[-1][0][:10],
+                        note=f'largest weekly {word} since {mon(r[bigger[-1] + MOVE_DAYS][0][:7])}' if bigger
+                        else f'largest weekly {word} on record (data from {r[0][0][:4]})'))
+    fmt = lambda g, v: f'{v:+.2f}%' if g['unit'] == '%' else f'{v:+.2f} pp' if g['unit'] == 'pp' else f'{v:.2f}' if g['unit'] == 'x' else f'${v:,.0f}bn'
+    for g in gaps:
+        if g['unusual']:
+            out.append(dict(kind='gap', key=g['key'], label=g['label'], shown=fmt(g, g['value']), date=g['date'],
+                            note=f"usually {fmt(g, g['usual'][0])} to {fmt(g, g['usual'][1])} (since {g['since']})" if g['usual'] else ''))
     return out
 
 
@@ -491,7 +611,7 @@ def report(db, SERIES):
     F = forecast.run(sp, nf, W['ebp'], W['usrec'], months, live_x)
     warn_hist = warning_pillar(W, F, months)
 
-    pscore = {p: balanced(p, {k: c['pct'] for k, c in C.items() if c['pillar'] == p}) for p in ('stress', 'money', 'fiscal')}
+    pscore = {p: balanced(p, {k: c['pct'] for k, c in C.items() if c['pillar'] == p}) for p in WEIGHTS if p != 'warning'}
     pscore['warning'] = pct(sorted(F['history'].values()), F['now'])  # today's probability vs the model's own history
     H, P = history(C, warn_hist, months)
     for p in WEIGHTS:  # this month = today's live reading
@@ -517,6 +637,7 @@ def report(db, SERIES):
         stag_th.append(dict(at=th, months=len(hit), near=round(100 * sum(map(stag_near, hit)) / len(hit)) if hit else None))
 
     real80 = monthly(db, 'GOLD_M')['1980-01'] / monthly(db, 'CPI')['1980-01']
+    gaps = pairs(db)
     risky = lambda c: c['pct'] >= 0.85
     flags = [dict(key=k, label=c['label'], shown=shown(c, real80), pct=round(100 * c['pct']), pillar=c['pillar'])
              for k, c in sorted(C.items(), key=lambda kv: -kv[1]['pct']) if risky(c)]
@@ -552,6 +673,8 @@ def report(db, SERIES):
         components=[dict(key=k, label=c['label'], pillar=c['pillar'], value=round(c['now'][1], 4), shown=shown(c, real80),
                          date=c['now'][0][:10], pct=round(100 * c['pct']), series=c['series']) for k, c in C.items()],
         flags=dict(high=flags, low=calm),
+        unusual=unusual(db, C, lambda c: shown(c, real80), gaps),
+        pairs=gaps,
         forecast=dict(probability=round(100 * F['now'], 1), percentile=round(100 * pscore['warning']),
                       inputs=[dict(key=k, label=names[k], value=round(v, 3), weight=round(F['weights'][k], 3))
                               for k, v in F['x'].items()],

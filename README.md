@@ -1,7 +1,7 @@
 # willthesystemcollapse.com
 
 A live, backtested gauge of how close the financial system is to breaking. A stdlib-Python collector pulls 140+ public
-series into SQLite every 15 minutes, scores them (four pillars, backtested since 1973) and writes one JSON file that the
+series into SQLite every 15 minutes, scores them (five pillars, backtested since 1973) and writes one JSON file that the
 static Astro page polls. It also writes the live answer, score and summary into the built page, so the first paint and
 crawlers see them before the script runs.
 
