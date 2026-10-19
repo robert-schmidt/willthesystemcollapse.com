@@ -469,7 +469,7 @@ def snapshot(page, r):
     kind = {'record': 'Record', 'move': 'Sudden move', 'gap': 'Markets apart'}  # the same list the page script draws
     html = fill(html, 'unusual-list', raw=''.join(
         f'<li><i>{kind[u["kind"]]}</i><span>{escape(u["label"])} <b>{escape(u["shown"])}</b></span><em>{escape(u["note"])}</em></li>'
-        for u in r['unusual']) or '<li class="none">Nothing out of the ordinary: no records, sudden moves or markets pulling apart.</li>')
+        for u in r.get('unusual', [])) or '<li class="none">Nothing out of the ordinary: no records, sudden moves or markets pulling apart.</li>')
     # short enough for one line on a phone, like the script's "updated 5 min ago"; the date is in datetime and the JSON-LD
     html = fill(html, 'updated', f"updated {at:%H:%M} UTC", {'datetime': r['updated']})
     html = re.sub(r'"dateModified":"[^"]*"', f'"dateModified":"{r["updated"]}"', html)
