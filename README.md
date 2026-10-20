@@ -37,6 +37,7 @@ A HestiaCP server; the site runs as its own Hestia user, `willthesystemcollapse`
 | Live JSON | `public_html/live/` (deploys never touch it; served with CORS `*` and no-cache by `nginx.ssl.conf_live`) |
 | Cron | Hestia cron job of the user, `*/15`: `sh ~/app/repo/collector/cron.sh` (flock, so runs never overlap) |
 | TLS | Hestia Let's Encrypt (auto-renews), forced HTTPS, HSTS |
+| Email in | MX → Postmark, inbound domain catches every address; Postmark posts each email to `/api/postmark-inbound.php` (`public/api/`), which forwards it through the Postmark API. Config: `~/web/willthesystemcollapse.com/private/postmark.ini` (mode 600, not in git) |
 
 ```bash
 git push && npm run deploy   # deploy.sh builds origin/main into a fresh release, syncs dist/ into the web root,
