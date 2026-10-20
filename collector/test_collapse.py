@@ -40,4 +40,12 @@ P = {m: 1.05 ** (i / 12) for i, m in enumerate(ms)}
 flat = lambda v: {m: v for m in ms}
 combo, y = score.ten_year(P, flat(0.0), flat(1.0), flat(2.0), {m: 10 + i % 7 for i, m in enumerate(ms)})
 assert abs(y['1950-01'] - 5) < 1e-9 and abs(combo[max(combo)] - 5) < 1e-6, (y['1950-01'], combo[max(combo)])
+# odds: months already inside a crisis don't count, so a calm month's odds mean "one starts", like the recession card
+ms = score.span('1990-01', '1999-12')
+ev = dict(crisis=(['1995-01'], set(score.span('1995-01', '1995-06'))), recession=([], set()), bear=([], set()))
+o = score.odds({m: 50.0 for m in ms}, ev, 50.0, '1999-12')
+assert o['crisis_12m'] == dict(like=12, months=102, base=12), o['crisis_12m']
+# the ticker's change: the previous day's value for daily data, nothing without history
+db.executemany('INSERT INTO obs VALUES (?,?,?)', [('D', '2026-10-16', 1.0), ('D', '2026-10-19', 2.0)])
+assert score.ago(db, 'D') == 1.0 and score.ago(db, 'none') is None
 print('ok')

@@ -10,9 +10,9 @@ import { ARCHIVE, LICENSE, REPO } from '../site';
 // fields, so the first paint and crawlers see the reading before the script runs.
 const SITE = Astro.site!.href.replace(/\/$/, '');
 const ODDS = [
-  ['crisis_12m', 'Crisis under way or starting within 12 months', 'any of the 13 episodes since 1973'],
-  ['crisis_24m', 'Crisis within 24 months', 'any episode, from SVB-size to 2008-size'],
-  ['severe_24m', 'Severe crisis within 24 months', '1973–75, 1979–82, 2008 or 2020 scale'],
+  ['crisis_12m', 'Crisis starting within 12 months', 'any of the 13 episodes since 1973, 6 of them without a recession'],
+  ['crisis_24m', 'Crisis starting within 24 months', 'any episode, from SVB-size to 2008-size'],
+  ['severe_24m', 'Severe crisis starting within 24 months', '1973–75, 1979–82, 2008 or 2020 scale'],
   ['recession_24m', 'US recession starting within 24 months', 'NBER dates'],
   ['bear_24m', 'US stocks falling 20%+ within 24 months', 'OECD share-price index'],
 ];
@@ -84,7 +84,7 @@ const ld = {
     <section class="odds" aria-labelledby="odds-title">
       <div class="odds-head">
         <h2 id="odds-title">Will it? What followed months like this one</h2>
-        <p class="muted small" id="odds-note">Every month since 1973 that scored within 3 points of today, and what happened next, against the average month.</p>
+        <p class="muted small" id="odds-note">Every month since 1973 that scored within 3 points of today and wasn't already in the event, and what happened next, against the average month.</p>
       </div>
       <div class="odds-grid tiles" id="odds-grid">
         {ODDS.map(([k, title, note]) => <div class="card odd avg-risk" data-k={k}><p class="ov">--</p><p class="ot">{title}</p><p class="ob"><span>average month --</span><i></i></p><p class="muted tiny">{note}</p></div>)}
@@ -342,6 +342,7 @@ const ld = {
           <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added the value of US company shares against GDP (a record 255% at the time, including privately held firms; about 210% for listed companies alone) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
           <li><strong>v5 · Fairer averaging and calibrated labels.</strong> Inputs that measure the same thing are now averaged together first (eight consumer-inflation measures had been outvoting producer prices, expectations and the dollar; four stress indices outvoted the rest), which improved crisis warning a year ahead from 0.73 to 0.75. Bands are now set where the historical odds actually change, and the page shows those odds: the old "calm" label covered months whose odds were average. Tested and rejected: weights fitted by a model (worse out of sample: a dozen crises are too few to fit weights on) and an oil-shock signal (no added power; oil was then just below its three-year high).</li>
           <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which keeps it to 1974, 1980 and 2008–09. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
+          <li><strong>Correction after v6 · the odds cards.</strong> "What followed months like this one" counted months already inside a crisis (and months inside a recession, as if none had started), which overstated the crisis odds for a month like today, when none is under way. The cards now compare only months not already in the event (20 October 2026: crisis starting within 12 months 60% → 51%, against an average month of 44% → 29%). The score and its bands are unchanged.</li>
           <li><strong>Research after v6 · household credit and the 10-year yield.</strong> Tested against the same rule and rejected, none adding anything the score didn't already know: credit-card, consumer, mortgage and auto-loan delinquencies, the Treasury term premium, the Italy–Germany bond spread, the real 10-year yield, its 12-month change, long rates rising while the Fed cuts, and two refinements of the yield curve (stripping out the term premium cut recession warning from 0.90 to 0.73). Stock valuations and the AI investment boom went into a separate long-run panel instead, where the evidence for them is: they predict ten-year returns.</li>
           <li><strong>Research after v5 · signals before crises.</strong> An event study of 20 crisis and crash starts showed market gauges (stress indices, VIX, credit spreads, stock trends) don't move until the month trouble hits; if anything, volatility is unusually low three months before. Building permits, bank lending standards and jobless claims did move earlier and are shown in the pre-crisis checklist, but adding them to the score or the recession model didn't improve either out of sample, so the formula is unchanged.</li>
         </ol>
@@ -482,7 +483,7 @@ const ld = {
         return `<div class="bandcard${active}" style="--c:${BAND_COLORS[b.key]}"><span class="range">${b.at}–${next}</span><p class="ans">${esc(b.answer)}</p><p class="bl">${esc(b.label)}</p><p class="st">${stat}</p></div>`;
       })
       .join('');
-    $('band-note').textContent = `Bands are set where the historical odds change: below 40, crises were rare; 40–50 is below the average month's odds; from 50 they are above it. On average ${d.odds.crisis_12m.base}% of months were in a crisis or within a year of one, and ${d.odds.crisis_24m.base}% within two years. The score has reached ${top}+ only in ${years.join(', ')}: each time, governments or central banks had to step in to keep the system working.`;
+    $('band-note').textContent = `Bands are set where the historical odds change: below 40, crises were rare; 40–50 is below the average month's odds; from 50 they are above it. On average ${bt.base}% of months were in a crisis or within a year of one. The score has reached ${top}+ only in ${years.join(', ')}: each time, governments or central banks had to step in to keep the system working.`;
   }
 
   // ---------- history chart ----------
@@ -702,25 +703,31 @@ const ld = {
   }
 
   function drawTicker(d: any) {
-    const m = d.markets;
-    const items = [
-      ['GOLD', money(m.gold.price)],
-      ['SILVER', money(m.gold.silver)],
-      ['GOLD/SILVER', num(m.gold.gold_silver, 1)],
-      ['BTC', money(m.btc.price, 0)],
-      ['BTC IN GOLD', num(m.btc.in_gold_oz, 1) + ' oz'],
-      ['US 10Y', num(m.yields.us10) + '%'],
-      ['US 2Y', num(m.yields.us2) + '%'],
-      ['10Y REAL', num(m.yields.us10_real) + '%'],
-      ['VIX', num(m.vix, 1)],
-      ['US DEBT', money(m.us_debt.total / 1e12, 2) + 'T'],
-      ['SCORE', d.score.toFixed(1)],
-      ['CRISIS NOW', d.acute.toFixed(0)],
-      ['STRUCTURAL', d.structural.toFixed(0)],
-      ['FED FUNDS', num(m.fed.rate) + '%'],
-      ['RECESSION 12M', d.forecast.probability.toFixed(0) + '%'],
+    const m = d.markets, ch = m.change_24h || {};
+    // label, value, its change over the last day: % for prices, points for rates and our readings
+    const items: [string, string, string, string][] = [
+      ['GOLD', money(m.gold.price), 'gold', '%'],
+      ['SILVER', money(m.gold.silver), 'silver', '%'],
+      ['GOLD/SILVER', num(m.gold.gold_silver, 1), 'gold_silver', '%'],
+      ['BTC', money(m.btc.price, 0), 'btc', '%'],
+      ['BTC IN GOLD', num(m.btc.in_gold_oz, 1) + ' oz', 'btc_gold', '%'],
+      ['US 10Y', num(m.yields.us10) + '%', 'us10', 'pp'],
+      ['US 2Y', num(m.yields.us2) + '%', 'us2', 'pp'],
+      ['10Y REAL', num(m.yields.us10_real) + '%', 'us10_real', 'pp'],
+      ['VIX', num(m.vix, 1), 'vix', '%'],
+      ['US DEBT', money(m.us_debt.total / 1e12, 2) + 'T', 'us_debt', '%'],
+      ['SCORE', d.score.toFixed(1), 'score', 'pts'],
+      ['CRISIS NOW', d.acute.toFixed(0), 'acute', 'pts'],
+      ['STRUCTURAL', d.structural.toFixed(0), 'structural', 'pts'],
+      ['FED FUNDS', num(m.fed.rate) + '%', 'fed', 'pp'],
+      ['RECESSION 12M', d.forecast.probability.toFixed(0) + '%', 'recession', 'pts'],
     ];
-    const html = items.map(([k, v]) => `<span><em>${k}</em> ${v}</span>`).join('');
+    const delta = (k: string, u: string) => {
+      const v = ch[k];
+      if (v == null) return '';  // not a day of history yet
+      return ` <b class="${v > 0 ? 'up' : v < 0 ? 'down' : 'muted'}">${v > 0 ? '+' : ''}${v.toFixed(u === 'pts' ? 1 : 2)}${u === '%' ? '%' : ''}</b>`;
+    };
+    const html = items.map(([k, v, c, u]) => `<span><em>${k}</em> ${v}${delta(c, u)}</span>`).join('');
     $('ticker').innerHTML = html + html;
   }
 
@@ -747,7 +754,7 @@ const ld = {
       c.querySelector('.ob span')!.textContent = `average month ${x.base}%`;
       c.querySelector('.ob i')!.textContent = `${diff > 0 ? '+' : ''}${diff} pts`;
     });
-    $('odds-note').textContent = `All ${o.crisis_12m.months} months since 1973 that scored within 3 points of today (${d.score.toFixed(0)}), and what happened next, against the average month. History, not a forecast.`;
+    $('odds-note').textContent = `All ${o.crisis_12m.months} months since 1973 that scored within 3 points of today (${d.score.toFixed(0)}) with no crisis under way, and what happened next, against the average month. History, not a forecast.`;
   }
 
   const LEAD_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', permits: '#d9b45a', lending: '#c89cf0', claims: '#6fbf8e', vix_rise: '#9c9584' };
@@ -957,6 +964,7 @@ const ld = {
   .ticker { height: 31px; overflow: hidden; border-bottom: 1px solid var(--rule); background: #08080a; font: 500 0.76rem/1 var(--mono); }
   .track { display: inline-flex; gap: 32px; padding: 9px 0; white-space: nowrap; animation: scroll 70s linear infinite; }
   .track :global(em) { font-style: normal; color: var(--muted); margin-right: 6px; }
+  .track :global(b) { font-weight: inherit; }
   @keyframes scroll { to { transform: translateX(-50%); } }
 
   /* hero */

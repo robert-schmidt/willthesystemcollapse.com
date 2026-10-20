@@ -445,7 +445,7 @@ def summary(r):
              if high else 'no red flags')
     above = [k for k in ('crisis_24m', 'recession_24m', 'bear_24m') if od[k]['like'] is not None and od[k]['like'] - od[k]['base'] >= 10]
     c, s = od['crisis_24m'], od['severe_24m']
-    horizon = (f"Over two years the odds are above average: {c['like']}% of months like this saw a crisis within 24 months "
+    horizon = (f"Over two years the odds are above average: {c['like']}% of months like this saw a crisis start within 24 months "
                f"(average {c['base']}%), mostly milder ones; {s['like']}% a severe one (average {s['base']}%)."
                if above else 'Over two years the odds are about average.')
     return (f"Score {r['score']:.0f}/100 ({r['band']['label'].lower()}). Markets are {mood} (stress {p['stress']:.0f}) and "
@@ -523,7 +523,7 @@ if __name__ == '__main__':
         sys.exit()
     db = connect(os.path.expanduser(a.db))
     refresh(db, a.only, a.force)
-    # live venue snapshots are only shown as "now"; keep 30 days
+    # live snapshots (venues, and our own readings for the ticker's 24-hour change) are only shown as "now"; keep 30 days
     db.execute("DELETE FROM obs WHERE series LIKE 'V!_%' ESCAPE '!' AND d < ?",
                ((datetime.now(timezone.utc) - timedelta(days=30)).strftime('%Y-%m-%d'),))
     db.commit()
@@ -533,6 +533,9 @@ if __name__ == '__main__':
         tmp = os.path.join(out, '.collapse.json.tmp')
         rep = score.report(db, SERIES)
         rep['summary'] = summary(rep)
+        db.executemany('INSERT OR REPLACE INTO obs VALUES (?,?,?)', [(f'V_{k.upper()}', rep['updated'], v) for k, v in (
+            ('score', rep['score']), ('acute', rep['acute']), ('structural', rep['structural']), ('recession', rep['forecast']['probability']))])
+        db.commit()
         with open(tmp, 'w') as f:
             json.dump(rep, f, separators=(',', ':'))
         os.replace(tmp, os.path.join(out, 'collapse.json'))  # atomic: the page never reads a half-written file

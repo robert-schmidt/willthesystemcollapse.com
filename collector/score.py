@@ -14,7 +14,7 @@ History uses expanding-window percentiles and a walk-forward model: what the gau
 import bisect, math, sys
 from itertools import groupby
 import forecast
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 
 VERSION = 6  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
 # v4 + stock valuations and corporate leverage, forward-looking r − g, debt growth after inflation, history = live inputs;
@@ -93,6 +93,16 @@ def value_at(db, key, d):
     """Last value on or before date d."""
     r = db.execute('SELECT v FROM obs WHERE series=? AND d<=? ORDER BY d DESC LIMIT 1', (key, d)).fetchone()
     return r[0] if r else None
+
+
+def ago(db, key):
+    """The value a day earlier: 24 hours ago for live snapshots (timestamped), the previous day's for daily data."""
+    r = latest(db, key)
+    if not r:
+        return None
+    if 'T' in r[0]:
+        return value_at(db, key, (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%SZ'))
+    return value_at(db, key, days_before(r[0], 1))
 
 
 def days_before(d, n):
@@ -570,31 +580,34 @@ def leads(db, P, months, ev, now):
 
 
 def odds(H, ev, score, now):
-    """What followed months that scored like this one (within ±3 points), against the average month."""
+    """What followed months that scored like this one (within ±3 points), against the average month. Only months not
+    already in the event count: none is under way today, so counting those would inflate the odds."""
     starts, inside = ev['crisis']
     sev_inside = {m for a, b, _ in CRISES if a in SEVERE for m in span(a, b)}
     rec_starts, rec_inside = ev['recession']
     bear_starts, _ = ev['bear']
-    tests = {
-        'crisis_12m': (12, lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)),
-        'crisis_24m': (24, lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)),
-        'severe_24m': (24, lambda m, h: m in sev_inside or any(m < x <= shift(m, h) for x in SEVERE)),
-        'recession_24m': (24, lambda m, h: m not in rec_inside and any(m < x <= shift(m, h) for x in rec_starts)),
-        'bear_24m': (24, lambda m, h: any(m < x <= shift(m, h) for x in bear_starts)),
+    tests = {  # horizon, months already in the event, its start months
+        'crisis_12m': (12, inside, starts),
+        'crisis_24m': (24, inside, starts),
+        'severe_24m': (24, sev_inside, SEVERE),
+        'recession_24m': (24, rec_inside, rec_starts),
+        'bear_24m': (24, set(), bear_starts),
     }
     out = {}
-    for key, (h, f) in tests.items():
-        known = [m for m in H if m <= shift(now, -h)]
+    for key, (h, ins, st) in tests.items():
+        hit = lambda m: any(m < x <= shift(m, h) for x in st)
+        known = [m for m in H if m <= shift(now, -h) and m not in ins]
         like = [m for m in known if abs(H[m] - score) <= 3]
-        out[key] = dict(like=round(100 * sum(f(m, h) for m in like) / len(like)) if like else None, months=len(like),
-                        base=round(100 * sum(f(m, h) for m in known) / len(known)))
+        out[key] = dict(like=round(100 * sum(map(hit, like)) / len(like)) if like else None, months=len(like),
+                        base=round(100 * sum(map(hit, known)) / len(known)))
+    near = lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)  # what the bands measure
     bins = []
     for lo in range(30, 85, 5):
         known = [m for m in H if lo <= H[m] < lo + 5 and m <= shift(now, -24)]
         if known:
             bins.append(dict(lo=lo, months=len(known),
-                             crisis_12m=round(100 * sum(tests['crisis_12m'][1](m, 12) for m in known) / len(known)),
-                             crisis_24m=round(100 * sum(tests['crisis_24m'][1](m, 24) for m in known) / len(known))))
+                             crisis_12m=round(100 * sum(near(m, 12) for m in known) / len(known)),
+                             crisis_24m=round(100 * sum(near(m, 24) for m in known) / len(known))))
     out['bins'] = bins
     return out
 
@@ -652,6 +665,11 @@ def report(db, SERIES):
                               recession_risk=round(100 * F['history'][m]) if m in F['history'] else None,
                               band=[b for b in BANDS if H[m] >= b[0]][-1][3]))
 
+    mk = markets(db)
+    for k, v in dict(score=score, acute=acute, structural=structural, recession=100 * F['now']).items():
+        then = ago(db, f'V_{k.upper()}')  # written by the collector after each run
+        mk['change_24h'][k] = round(v - then, 1) if then is not None else None
+
     meta = {r[0]: r[1:] for r in db.execute('SELECT series, ok, fetched FROM meta')}
     lastd = dict(db.execute('SELECT series, max(d) FROM obs GROUP BY series'))
     names = dict(spread='10-year minus 3-month Treasury yield', inv18='Lowest 10y−3m spread in the last 18 months',
@@ -690,7 +708,7 @@ def report(db, SERIES):
         events=dict(recessions=ev['recession'][0], bear_markets=ev['bear'][0], stagflation=ev['stagflation'][0]),
         backtest=bt,
         cases=cases,
-        markets=markets(db),
+        markets=mk,
         sources=[dict(key=k, label=v[3], source=v[4], ok=bool(meta.get(k, (0,))[0]), fetched=meta.get(k, (0, None))[1],
                       last=lastd.get(k)) for k, v in SERIES.items()],
     )
@@ -781,6 +799,16 @@ def markets(db):
     silver = latest(db, 'SILVER')
     btc = latest(db, 'V_KRAKEN_BTC') or latest(db, 'BTC')
     y = lambda k: latest(db, k)[1]
+    # the ticker's change over the last day: % for prices, points for rates; None until there's a day of history
+    tokens = sorted(x for v in venues if v['kind'] == 'token' and (x := ago(db, v['key'])))
+    spot0 = tokens[len(tokens) // 2] if tokens else None  # the same median of the live venues as the price shown
+    btc0, gold0, silver0 = ago(db, 'V_KRAKEN_BTC' if latest(db, 'V_KRAKEN_BTC') else 'BTC'), ago(db, 'GOLD'), ago(db, 'SILVER')
+    rel = lambda a, b: round(100 * (a / b - 1), 2) if a and b else None
+    dif = lambda k: round(y(k) - ago(db, k), 2) if ago(db, k) is not None else None
+    day = dict(gold=rel(spot, spot0), silver=rel(silver[1], silver0),
+               gold_silver=rel(gold / silver[1], gold0 / silver0 if gold0 and silver0 else None), btc=rel(btc[1], btc0),
+               btc_gold=rel(btc[1] / spot, btc0 / spot0 if btc0 and spot0 else None), vix=rel(y('VIX'), ago(db, 'VIX')),
+               us_debt=rel(v1, ago(db, 'DEBT')), us10=dif('DGS10'), us2=dif('DGS2'), us10_real=dif('DFII10'), fed=dif('DFF'))
     return dict(
         gold=dict(price=round(spot, 2), reference=round(gold, 2), reference_date=gold_d, change_1y=change(db, 'GOLD', 365),
                   real_vs_1980=round((spot / cpi_now) / (gm['1980-01'] / cpi['1980-01']) - 1, 3),
@@ -804,6 +832,7 @@ def markets(db):
         house_prices=dict(change_1y=round(latest(db, 'HPI')[1] / value_at(db, 'HPI', days_before(latest(db, 'HPI')[0], 365)) - 1, 4),
                           date=latest(db, 'HPI')[0]),
         vix=y('VIX'),
+        change_24h=day,
     )
 
 
