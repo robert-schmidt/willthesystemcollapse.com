@@ -45,6 +45,9 @@ ms = score.span('1990-01', '1999-12')
 ev = dict(crisis=(['1995-01'], set(score.span('1995-01', '1995-06'))), recession=([], set()), bear=([], set()))
 o = score.odds({m: 50.0 for m in ms}, ev, 50.0, '1999-12')
 assert o['crisis_12m'] == dict(like=12, months=102, base=12), o['crisis_12m']
+# ...and months scoring far from today carry no weight: the 12 before the crisis scored 90, so a 50 saw none follow
+o = score.odds({m: 90.0 if '1994' <= m < '1995' else 50.0 for m in ms}, ev, 50.0, '1999-12')
+assert o['crisis_12m'] == dict(like=0, months=90, base=12), o['crisis_12m']
 # the ticker's change: the previous day's value for daily data, nothing without history
 db.executemany('INSERT INTO obs VALUES (?,?,?)', [('D', '2026-10-16', 1.0), ('D', '2026-10-19', 2.0)])
 assert score.ago(db, 'D') == 1.0 and score.ago(db, 'none') is None

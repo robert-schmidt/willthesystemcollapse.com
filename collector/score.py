@@ -595,8 +595,10 @@ def leads(db, P, months, ev, now):
 
 
 def odds(H, ev, score, now):
-    """What followed months that scored like this one (within ±3 points), against the average month. Only months not
-    already in the event count: none is under way today, so counting those would inflate the odds."""
+    """What followed months that scored like this one, against the average month. Each month is weighted by how close its
+    score was (Gaussian, 5 points: half weight 6 points away), which beat a ±3-point window on all five cards out of
+    sample and doesn't jump when the score moves a point. Only months not already in the event count: none is under way
+    today, so counting those would inflate the odds. `months` is the effective number of months."""
     starts, inside = ev['crisis']
     sev_inside = {m for a, b, _ in CRISES if a in SEVERE for m in span(a, b)}
     rec_starts, rec_inside = ev['recession']
@@ -612,8 +614,10 @@ def odds(H, ev, score, now):
     for key, (h, ins, st) in tests.items():
         hit = lambda m: any(m < x <= shift(m, h) for x in st)
         known = [m for m in H if m <= shift(now, -h) and m not in ins]
-        like = [m for m in known if abs(H[m] - score) <= 3]
-        out[key] = dict(like=round(100 * sum(map(hit, like)) / len(like)) if like else None, months=len(like),
+        w = {m: math.exp(-0.5 * ((H[m] - score) / 5) ** 2) for m in known}
+        sw = sum(w.values())
+        out[key] = dict(like=round(100 * sum(w[m] for m in known if hit(m)) / sw) if sw > 1e-9 else None,
+                        months=round(sw * sw / sum(v * v for v in w.values())) if sw > 1e-9 else 0,
                         base=round(100 * sum(map(hit, known)) / len(known)))
     near = lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)  # what the bands measure
     bins = []
