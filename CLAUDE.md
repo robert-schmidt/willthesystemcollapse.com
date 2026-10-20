@@ -16,8 +16,16 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   12-month change, "vigilantes" (10y up while the Fed cuts).
   The acceptance rule used for v6 (keep using it): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
   0; recession and severe ahead-12 down no more than 0.02; ≥ 70 band still ≥ 90% near a crisis; gain in 1973–99 and 2000+.
+  v7 exception (the owner's call, 2026-10-20): policy uncertainty and geopolitical risk went in under a no-harm rule set before
+  the test (crisis ahead-24 down ≤ 0.01 with its CI including 0; recession/severe ahead-12 down ≤ 0.02; ≥ 70 band ≥ 90%; no
+  era down > 0.02). EPU's theme weight 2 is the most at which crisis ahead-24 stayed ≥ v6 (3 lost ground): don't raise it
+  without a new test, and don't treat the exception as precedent. Rejected in v7 research: EPU/GPR in the recession model,
+  GPR level as stress (during-crisis AUC 0.56), global EPU, the World Uncertainty Index, IMF social unrest (its one pass came
+  from 2019 → Covid and the Arab Spring → 2011, and IMF event dates use hindsight), ParlGov vote shares (stop in June 2023).
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
+  EPU (policyuncertainty.com) and GPR (matteoiacoviello.com) are CC BY 4.0 and the IMF unrest index needs attribution:
+  keep their credits in the society panel and the feed labels.
 - **Server.** Shared HestiaCP VPS: touch only this site's `willthesystemcollapse` account (and the sister
   site's, see CLAUDE.local.md). Deploy with `git push && npm run deploy` (no GitHub Actions). Cron stdout must stay quiet
   (cron mails it).
@@ -30,10 +38,12 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
 ## Method in one paragraph
 Each component becomes a percentile vs its own monthly history (expanding window, ≥ 60 months, each input
 forward-filled ≤ 6 months so history matches the live reading; quarterly/annual series placed at their publication month,
-`LAGS` in score.py). Pillars are theme-balanced means: stress (incl. CP − bill and VIX/VIX3M dislocations), warning (the
+`LAGS` in score.py). Pillars are theme-balanced means (`THEME_WEIGHTS` for exceptions): stress (incl. CP − bill and
+VIX/VIX3M dislocations, and US + Europe policy uncertainty in the news at double weight since v7), warning (the
 walk-forward recession model's percentile), money, fiscal, build-up (BIS 3y Δ private credit/GDP, Baa−10y from 24 months
-earlier). Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical
-crisis odds change (75+ = 1974, 1980, 2008–09 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
+earlier, geopolitical calm: minus the 12-month mean of Caldara–Iacoviello GPRH, as calm years came before crises).
+Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical
+crisis odds change (75+ = 1973–74, 1980, 2008–09 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
 moves, markets that should agree, incl. the SHFE gold premium) without entering the score. `outlook()` (also outside the
 score) is the expected 10-year real stock return: walk-forward OLS on log CAPE and the excess CAPE yield (Shiller's
 ie_data.xls via `xls_min.py`), averaged; ratios beyond any known 10-year outcome are shown, never modelled. Shiller's

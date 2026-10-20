@@ -248,6 +248,85 @@ def shiller(col):
     return [(month(r), v) for (r, c), v in sorted(cells.items()) if c == col and r >= 8 and (r, 0) in cells and month(r) < newest]
 
 
+def xlsx_rows(data):
+    """Rows of the first sheet of an .xlsx as {column letter: text}, shared strings resolved."""
+    z = zipfile.ZipFile(io.BytesIO(data))
+    ns = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+    shared = [''.join(t.text or '' for t in si.iter(f'{{{ns["m"]}}}t'))
+              for si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall('m:si', ns)] if 'xl/sharedStrings.xml' in z.namelist() else []
+    out = []
+    for row in ET.fromstring(z.read('xl/worksheets/sheet1.xml')).iter(f'{{{ns["m"]}}}row'):
+        r = {}
+        for c in row.findall('m:c', ns):
+            v = c.find('m:v', ns)
+            if v is not None:
+                r[re.match(r'[A-Z]+', c.get('r')).group(0)] = shared[int(v.text)] if c.get('t') == 's' else v.text
+        out.append(r)
+    return out
+
+
+@functools.lru_cache(maxsize=None)
+def epu_file(name):
+    return xlsx_rows(get(f'https://www.policyuncertainty.com/media/{name}.xlsx'))
+
+
+def epu(arg):
+    """Baker, Bloom and Davis's economic policy uncertainty: how much newspapers write about it, monthly (policyuncertainty.com,
+    free to use with attribution). arg = (file, column header)."""
+    name, header = arg
+    rows = epu_file(name)
+    col = next(k for k, v in rows[0].items() if v == header)
+    return [(f'{int(num(r["A"])):04d}-{int(num(r["B"])):02d}-01', num(r[col])) for r in rows[1:]
+            if num(r.get('A')) and num(r.get('B')) and num(r.get(col)) is not None]
+
+
+def gpr(_):
+    """Caldara and Iacoviello's historical geopolitical risk index, three newspapers since 1900, monthly (Federal Reserve Board,
+    matteoiacoviello.com, CC BY 4.0). Their export holds the month as an Excel date in column 0 and GPRH in column 4."""
+    import xls_min
+    c = xls_min.sheet(get('https://www.matteoiacoviello.com/gpr_files/data_gpr_export.xls'), 'Sheet1')
+    # ponytail: dates from March 1900 on (serial 61), where Excel's phantom 29 Feb 1900 no longer shifts them
+    return [(f'{date(1899, 12, 30) + timedelta(days=int(v)):%Y-%m}-01', c[r, 4]) for (r, k), v in c.items()
+            if k == 0 and v >= 61 and (r, 4) in c]
+
+
+@functools.lru_cache(maxsize=None)
+def rsui(key):
+    """IMF Reported Social Unrest Index (Barrett, Appendino, Nguyen and de Leon Miranda), from media reports, monthly:
+    {country: [(date, value)]}."""
+    raw = get(f'https://api.imf.org/external/sdmx/2.1/data/IMF.WHD,RSUI,latest/{key}?detail=dataonly',
+              {'Accept': 'application/vnd.sdmx.data+csv;version=1.0.0'}, timeout=180).decode()
+    out = {}
+    for r in csv.DictReader(io.StringIO(raw)):
+        y, m = r['TIME_PERIOD'].split('-M')
+        if num(r['OBS_VALUE']) is not None:
+            out.setdefault(r['COUNTRY'], []).append((f'{y}-{m}-01', num(r['OBS_VALUE'])))
+    return out
+
+
+UNREST_COUNTRIES = ['USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL']
+
+
+def unrest(country):
+    """One country's share of news about protests, riots and strikes (IMF index)."""
+    return sorted(rsui('+'.join(UNREST_COUNTRIES) + '.HEADLINE.M')[country])
+
+
+def unrest_count(events):
+    """Countries with a major unrest event in the trailing 12 months: {country: [(date, events)]} → [(date, count)]."""
+    months = sorted({d for s in events.values() for d, _ in s})  # ponytail: assumes no gap months (the IMF series has none)
+    hit = {d: set() for d in months}
+    for c, s in events.items():
+        for d, v in s:
+            if v > 0:
+                hit[d].add(c)
+    return [(m, len(set().union(*(hit[x] for x in months[i - 11:i + 1])))) for i, m in enumerate(months) if i >= 11]
+
+
+def unrest_world(_):
+    return unrest_count(rsui('.EVENT.M'))
+
+
 def kraken(pair):
     r = json.loads(get(f'https://api.kraken.com/0/public/Ticker?pair={pair}'))['result']
     return [(now_iso(), num(next(iter(r.values()))['c'][0]))]
@@ -397,6 +476,16 @@ SERIES = {
     'DPI': (fred, 'DPI', M, 'Disposable personal income', 'BEA via FRED'),
     'PROFITS': (fred, 'CP', M, 'Corporate profits after tax', 'BEA via FRED'),
     'TECH_INV': (fred, 'A679RC1Q027SBEA', M, 'Business investment in computers, software and data equipment', 'BEA via FRED'),
+    # society and politics: policy uncertainty and geopolitical risk in the stress pillar (v7), social unrest shown only
+    'EPU_US': (epu, ('US_Policy_Uncertainty_Data', 'News_Based_Policy_Uncert_Index'), W, 'US economic policy uncertainty, newspapers',
+               'Baker, Bloom and Davis, policyuncertainty.com'),
+    **{f'EPU_{c}': (epu, ('Europe_Policy_Uncertainty_Data', f'{name}_News_Index'), W, f'{label} economic policy uncertainty, newspapers',
+                    'Baker, Bloom and Davis, policyuncertainty.com')
+       for c, name, label in (('EU', 'European', 'Europe'), ('DE', 'Germany', 'Germany'), ('FR', 'France', 'France'),
+                              ('GB', 'UK', 'UK'), ('IT', 'Italy', 'Italy'), ('ES', 'Spain', 'Spain'))},
+    'GPR_H': (gpr, None, W, 'Geopolitical risk, newspapers (since 1900)', 'Caldara and Iacoviello, Federal Reserve Board (CC BY 4.0)'),
+    'UNREST_WORLD': (unrest_world, None, W, 'Countries with major social unrest in the last 12 months', 'IMF Reported Social Unrest Index'),
+    **{f'UNREST_{c}': (unrest, c, W, f'{c}: news coverage of social unrest', 'IMF Reported Social Unrest Index') for c in UNREST_COUNTRIES},
 }
 INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 

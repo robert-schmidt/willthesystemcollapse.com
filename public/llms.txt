@@ -4,7 +4,7 @@
 
 ## Pages
 
-- [Live monitor](https://willthesystemcollapse.com/): today's answer and score, the five pillars (market stress, recession warning, inflation and money, fiscal, credit build-up), red flags, unusual readings and markets that should agree, a long-run outlook (expected 10-year stock returns vs Treasuries), crisis odds, a backtest since 1973, the recession model, gold markets, debt and the full method.
+- [Live monitor](https://willthesystemcollapse.com/): today's answer and score, the five pillars (market stress, recession warning, inflation and money, fiscal, credit build-up), red flags, unusual readings and markets that should agree, a long-run outlook (expected 10-year stock returns vs Treasuries), society and politics (policy uncertainty, geopolitical risk and social unrest in the news), crisis odds, a backtest since 1973, the recession model, gold markets, debt and the full method.
 - [About](https://willthesystemcollapse.com/about/): what the financial system is and who is in it, what a collapse would look like, whether AI could build a better system, and who runs the site.
 
 ## Data

@@ -2,13 +2,15 @@
 
 Five pillars, each 0–1 (higher = more stress); score = 100 × (2·stress + warning + money + fiscal + build-up) / 6.
   stress    — is a crisis happening? Stress indices (NFCI, OFR, St. Louis Fed, ECB CISS), VIX and the stock drawdown,
-              credit spreads, unemployment, and dislocations (commercial paper over T-bills, VIX over VIX3M).
+              credit spreads, unemployment, dislocations (commercial paper over T-bills, VIX over VIX3M) and policy
+              uncertainty in the news (US, Europe; double weight since v7).
   warning   — is a recession coming within 12 months? Percentile of the forecast.py probability (yield curve, deepest recent
               inversion, financial conditions and their change, excess bond premium).
   money     — is money losing value? Official and alternative inflation, expectations, money growth, the dollar, gold.
   fiscal    — how much could break? Debt, deficits, the interest bill, r − g, foreign debt, G7 debt, bond sell-offs,
               corporate leverage, stock valuations and the inflation-adjusted gold price.
-  buildup   — are excesses building? Private credit growth over 3 years (BIS) and how cheap credit was two years ago.
+  buildup   — are excesses building? Private credit growth over 3 years (BIS), how cheap credit was two years ago, and how
+              calm geopolitics has been over the past year (complacency).
 History uses expanding-window percentiles and a walk-forward model: what the gauge would have said at the time.
 """
 import bisect, math, sys
@@ -16,18 +18,19 @@ from itertools import groupby
 import forecast
 from datetime import datetime, timezone, date, timedelta
 
-VERSION = 6  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
+VERSION = 7  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
 # v4 + stock valuations and corporate leverage, forward-looking r − g, debt growth after inflation, history = live inputs;
 # v5 theme-balanced pillars, bands calibrated on historical odds; v6 + build-up pillar (credit boom, credit sentiment),
-# funding dislocations in stress, history placed at each series' publication date
+# funding dislocations in stress, history placed at each series' publication date; v7 (the owner's call, under a no-harm rule)
+# + policy uncertainty in the news as a double-weight stress theme, and geopolitical calm (low risk = complacency) in build-up
 WEIGHTS = {'stress': 2, 'warning': 1, 'money': 1, 'fiscal': 1, 'buildup': 1}
 # Quarterly and annual data enter the history when it was published, not at the quarter it describes (months after the
 # observation date): Z.1 financial accounts ~10 weeks after quarter end, GDP's advance estimate a month after, BIS ~6 months.
 LAGS = {'EQUITY_MV': 5, 'CORP_DEBT': 5, 'HH_DEBT': 5, 'NIIP': 5, 'GDP': 3, 'DEBT_GDP': 3, 'INTEREST': 4, 'RECEIPTS': 4,
         'FED_DEBT_LEVEL': 3, 'DEFICIT_GDP': 9, 'BIS_CREDIT': 8}
-# Bands calibrated on historical odds (v6 backtest, 1973–2026): below 40, a crisis was under way or began within 12 months
-# in 9% of months; 40–50, 41% (below the 45% average); 50–60, 64% (above it); 60–70, 86%; 70+, all of them. 75+ only in
-# 1974, 1980 and 2008–09, the episodes that needed system-wide rescues. The page shows the odds next to the label.
+# Bands calibrated on historical odds (v6 backtest, 1973–2026), still holding in v7: below 40, a crisis was under way or began
+# within 12 months in 0% of months (v6: 9%); 40–50, 21% (below the 45% average); 50–60, 57% (above it); 60–70, 74%; 70+, all
+# of them. 75+ only in 1973–74, 1980 and 2008–09, the episodes that needed system-wide rescues. The page shows the odds.
 BANDS = [  # (from, key, answer, label)
     (0, 'calm', 'NO', 'Calm'),
     (40, 'normal', 'NO', 'Normal'),
@@ -40,15 +43,17 @@ BANDS = [  # (from, key, answer, label)
 # measures, 4 financial-stress indices) can't outvote the others: pillar = mean of its themes.
 THEMES = {
     'stress': {'stress indices': ['nfci', 'ofr', 'stlfsi', 'ciss'], 'equity fear': ['vix', 'drawdown'], 'credit': ['credit', 'ebp'],
-               'jobs': ['unemp'], 'dislocations': ['cp_bill', 'vix_curve']},
+               'jobs': ['unemp'], 'dislocations': ['cp_bill', 'vix_curve'], 'policy uncertainty': ['epu_us', 'epu_eu']},
     'money': {'consumer inflation': ['cpi', 'core_cpi', 'pce', 'sticky', 'median', 'trim_cpi', 'trim_pce', 'mct'], 'pipeline': ['ppi'],
               'momentum': ['accel'], 'expectations': ['exp10', 'exp5y5y'], 'money growth': ['m2'], 'dollar': ['usd_fall'],
               'gold': ['gold_mom']},
     'fiscal': {'government debt': ['debt_gdp', 'g7_debt'], 'deficit': ['deficit'], 'interest': ['interest', 'r_g'],
                'debt growth': ['debt_growth'], 'external': ['niip'], 'private leverage': ['corp_debt'], 'valuation': ['valuation'],
                'trust in paper': ['real_gold'], 'bond market': ['bond_selloff']},
-    'buildup': {'credit boom': ['boom'], 'credit sentiment': ['sentiment']},
+    'buildup': {'credit boom': ['boom'], 'credit sentiment': ['sentiment'], 'geopolitical calm': ['geo_calm']},
 }
+# v7: the most weight history allowed while crisis warning two years ahead stayed at least as good as v6 (×3 lost ground)
+THEME_WEIGHTS = {'policy uncertainty': 2}
 SEVERE = ['1973-11', '1979-10', '1981-08', '2007-08', '2020-02']  # crisis starts that needed system-wide rescues
 CRISES = [
     ('1973-11', '1975-03', 'Oil shock and the 1973–74 crash'),
@@ -270,6 +275,12 @@ def components(db):
     vr = mmax([(d, v / vix3m[d]) for d, v in S('VIX') if d in vix3m])
     add('vix_curve', 'VIX over VIX3M (above 1: fear is front-loaded), worst day this month', 'stress', vr,
         (max(vix3m), vr[max(vr)]), 'VIX3M', 'x')
+    # policy uncertainty: how much newspapers write about it (US, Europe). It rises as trouble arrives, not before
+    for key, series, label in (('epu_us', 'EPU_US', 'US economic policy uncertainty (newspapers)'),
+                               ('epu_eu', 'EPU_EU', 'Europe economic policy uncertainty (newspapers)')):
+        h = M(series)
+        if h:
+            add(key, label, 'stress', h, tail(h), series, 'pts')
     # build-up: how fast private debt outgrew the economy over 3 years, and how cheap credit was two years ago
     bis = ffill(M('BIS_CREDIT'), months, 4)
     boom = {m: bis[m] - bis[shift(m, -36)] for m in bis if shift(m, -36) in bis}
@@ -277,6 +288,11 @@ def components(db):
         add('boom', 'Private credit growth, 3 years (pp of GDP, BIS)', 'buildup', boom, tail(boom), 'BIS_CREDIT', 'pp_gdp')
     cheap = {shift(m, 24): -v for m, v in ffill(C['credit']['hist'], months, 6).items() if shift(m, 24) <= today}  # low then = risk now
     add('sentiment', 'Baa credit spread two years ago (low = complacency)', 'buildup', cheap, tail(cheap), 'BAA', 'neg_pp')
+    # geopolitical calm: crises since 1900 tended to start after quiet years (late 1990s, 2018–19, 2021), not tense ones
+    g = M('GPR_H')
+    calm = {m: -sum(g[shift(m, -j)] for j in range(12)) / 12 for m in g if all(shift(m, -j) in g for j in range(12))}
+    if calm:
+        add('geo_calm', 'Geopolitical calm, past 12 months (risk index shown; calm came before crises)', 'buildup', calm, tail(calm), 'GPR_H', 'neg_pts')
 
     for c in C.values():  # carry each input's latest value forward (≤ 6 months), as the live reading does
         c['hist'] = ffill(c['hist'], months, 6)
@@ -293,11 +309,10 @@ def components(db):
 
 
 def balanced(pillar, pcts):
-    """Theme-balanced pillar value from {component: percentile}; None if fewer than two themes have data (one for the
-    two-theme build-up pillar)."""
-    themes = [[pcts[k] for k in keys if k in pcts] for keys in THEMES[pillar].values()]
-    themes = [sum(t) / len(t) for t in themes if t]
-    return sum(themes) / len(themes) if len(themes) >= min(2, len(THEMES[pillar]) - 1) else None
+    """Theme-balanced pillar value from {component: percentile}, themes weighted by THEME_WEIGHTS (default 1); None if
+    fewer than two themes have data."""
+    themes = [(sum(t) / len(t), THEME_WEIGHTS.get(name, 1)) for name, keys in THEMES[pillar].items() if (t := [pcts[k] for k in keys if k in pcts])]
+    return sum(v * w for v, w in themes) / sum(w for _, w in themes) if len(themes) >= 2 else None
 
 
 def expanding(hist, months):
@@ -433,7 +448,7 @@ def shown(c, real80):
     return {'idx': f'{v:.2f}', 'idx3': f'{v:.3f}', 'pts': f'{v:.1f}', 'pp': f'{v:+.2f} pp', 'ratio': f'{100 * v:.1f}%',
             'ratio_pp': f'{100 * v:+.1f} pp', 'pct': f'{v:.1f}%', 'log': f'{100 * (math.exp(v) - 1):+.1f}%',
             'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs 1980 peak',
-            'pp_gdp': f'{v:+.1f} pp', 'neg_pp': f'{-v:.2f} pp', 'x': f'{v:.2f}'}[u]
+            'pp_gdp': f'{v:+.1f} pp', 'neg_pp': f'{-v:.2f} pp', 'x': f'{v:.2f}', 'neg_pts': f'{-v:.0f}'}[u]
 
 
 def hyperinflation(db, C):
@@ -509,7 +524,7 @@ def unusual(db, C, show, gaps):
     than 99.5% of all weekly moves on record. Raises awareness; the score itself only sees the inputs."""
     out = []
     for k, c in C.items():
-        if k == 'sentiment':  # its reading is two years old by design: not news
+        if k in ('sentiment', 'geo_calm'):  # two years old by design, or a record of calm: not news
             continue
         (d, v), h = c['now'], c['hist']
         year_ago = shift(d[:7], -12)  # a dip from last month's peak shouldn't hide a level not seen in decades
@@ -694,6 +709,7 @@ def report(db, SERIES):
         unusual=unusual(db, C, lambda c: shown(c, real80), gaps),
         pairs=gaps,
         outlook=long_run(db),
+        society=society(db),
         forecast=dict(probability=round(100 * F['now'], 1), percentile=round(100 * pscore['warning']),
                       inputs=[dict(key=k, label=names[k], value=round(v, 3), weight=round(F['weights'][k], 3))
                               for k, v in F['x'].items()],
@@ -712,6 +728,21 @@ def report(db, SERIES):
         sources=[dict(key=k, label=v[3], source=v[4], ok=bool(meta.get(k, (0,))[0]), fetched=meta.get(k, (0, None))[1],
                       last=lastd.get(k)) for k, v in SERIES.items()],
     )
+
+
+def society(db):
+    """Society and politics for the page, each against its own monthly history. Policy uncertainty and geopolitical risk are
+    also score inputs (v7); social unrest is shown only: its one near-pass in testing rested on two coincidences."""
+    def stat(key):
+        r = rows(db, key)
+        if not r:
+            return None
+        (d, v), top = r[-1], max(r, key=lambda x: x[1])
+        return dict(value=round(v, 1), date=d[:7], pct=round(100 * pct(sorted(x for _, x in r), v)), since=r[0][0][:4],
+                    max=round(top[1], 1), max_month=top[0][:7])
+    return dict(epu_us=stat('EPU_US'), epu_eu=stat('EPU_EU'), gpr=stat('GPR_H'), unrest_world=stat('UNREST_WORLD'),
+                epu_countries={c: stat(f'EPU_{c}') for c in ('DE', 'FR', 'GB', 'IT', 'ES')},
+                unrest_countries={c: stat(f'UNREST_{c}') for c in ('USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL')})
 
 
 def external(db):

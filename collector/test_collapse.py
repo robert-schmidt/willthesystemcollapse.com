@@ -48,4 +48,7 @@ assert o['crisis_12m'] == dict(like=12, months=102, base=12), o['crisis_12m']
 # the ticker's change: the previous day's value for daily data, nothing without history
 db.executemany('INSERT INTO obs VALUES (?,?,?)', [('D', '2026-10-16', 1.0), ('D', '2026-10-19', 2.0)])
 assert score.ago(db, 'D') == 1.0 and score.ago(db, 'none') is None
+# unrest: a country counts for 12 months after a major event, once however many events
+ev = {'A': [(f'{2020 + m // 12}-{m % 12 + 1:02d}-01', int(m in (0, 1))) for m in range(14)], 'B': [('2021-01-01', 1), ('2021-02-01', 0)]}
+assert collect.unrest_count(ev) == [('2020-12-01', 1), ('2021-01-01', 2), ('2021-02-01', 1)], collect.unrest_count(ev)
 print('ok')
