@@ -14,7 +14,7 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   after v6: delinquencies (cards, consumer, all loans, mortgages, NY Fed auto), ACM term premium (level, change), the
   expectations spread or Engstrom–Sharpe forward spread in the recession model, Italy−Germany 10y, real 10y yield, its
   12-month change, "vigilantes" (10y up while the Fed cuts).
-  The acceptance rule used for v6 (keep using it): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
+  The acceptance rule (written for v6; the baseline is always the live version, never v6): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
   0; recession and severe ahead-12 down no more than 0.02; ≥ 70 band still ≥ 90% near a crisis; gain in 1973–99 and 2000+.
   v7 exception (the owner's call, 2026-10-20): policy uncertainty and geopolitical risk went in under a no-harm rule set before
   the test (crisis ahead-24 down ≤ 0.01 with its CI including 0; recession/severe ahead-12 down ≤ 0.02; ≥ 70 band ≥ 90%; no
@@ -22,10 +22,14 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   without a new test, and don't treat the exception as precedent. Rejected in v7 research: EPU/GPR in the recession model,
   GPR level as stress (during-crisis AUC 0.56), global EPU, the World Uncertainty Index, IMF social unrest (its one pass came
   from 2019 → Covid and the Arab Spring → 2011, and IMF event dates use hindsight), ParlGov vote shares (stop in June 2023).
+  Rejected after v7 (2026-10-20, baseline v7): partisan conflict (Richmond Fed), migration fear (US/UK/DE; France stops 2019),
+  trade policy uncertainty, SF Fed news sentiment (stress, build-up calm, recession model: AUC 0.89 → 0.81–0.85), EU consumer
+  confidence, EMV, categorical EPU (sovereign debt, monetary); the best, EMV + debt EPU, was +0.011 with CI incl. 0, best 2 of
+  15. All shown in the society panel, outside the score.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
-  EPU (policyuncertainty.com) and GPR (matteoiacoviello.com) are CC BY 4.0 and the IMF unrest index needs attribution:
-  keep their credits in the society panel and the feed labels.
+  EPU (policyuncertainty.com) and GPR/TPU (matteoiacoviello.com) are CC BY 4.0; the IMF unrest index, Richmond Fed partisan
+  conflict, SF Fed news sentiment and Eurostat need attribution: keep their credits in the society panel and the feed labels.
 - **Server.** Shared HestiaCP VPS: touch only this site's `willthesystemcollapse` account (and the sister
   site's, see CLAUDE.local.md). Deploy with `git push && npm run deploy` (no GitHub Actions). Cron stdout must stay quiet
   (cron mails it).

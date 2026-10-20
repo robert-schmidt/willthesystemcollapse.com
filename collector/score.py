@@ -731,18 +731,21 @@ def report(db, SERIES):
 
 
 def society(db):
-    """Society and politics for the page, each against its own monthly history. Policy uncertainty and geopolitical risk are
-    also score inputs (v7); social unrest is shown only: its one near-pass in testing rested on two coincidences."""
-    def stat(key):
+    """Society and politics for the page, each against its own history. Policy uncertainty and geopolitical risk are also
+    score inputs (v7); the rest is shown only: unrest's one near-pass rested on two coincidences, and partisan conflict,
+    migration fear, trade policy uncertainty, news sentiment and EU consumer confidence made crisis warning no better (2026-10)."""
+    def stat(key, low=False):  # low: the record that matters is the bottom (news tone, confidence)
         r = rows(db, key)
         if not r:
             return None
-        (d, v), top = r[-1], max(r, key=lambda x: x[1])
-        return dict(value=round(v, 1), date=d[:7], pct=round(100 * pct(sorted(x for _, x in r), v)), since=r[0][0][:4],
-                    max=round(top[1], 1), max_month=top[0][:7])
+        (d, v), top = r[-1], (min if low else max)(r, key=lambda x: x[1])
+        return dict(value=round(v, 2 if abs(v) < 10 else 1), date=d[:10] if len(r) > 2000 else d[:7], pct=round(100 * pct(sorted(x for _, x in r), v)),
+                    since=r[0][0][:4], max=round(top[1], 2 if abs(top[1]) < 10 else 1), max_month=top[0][:7])
     return dict(epu_us=stat('EPU_US'), epu_eu=stat('EPU_EU'), gpr=stat('GPR_H'), unrest_world=stat('UNREST_WORLD'),
                 epu_countries={c: stat(f'EPU_{c}') for c in ('DE', 'FR', 'GB', 'IT', 'ES')},
-                unrest_countries={c: stat(f'UNREST_{c}') for c in ('USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL')})
+                unrest_countries={c: stat(f'UNREST_{c}') for c in ('USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL')},
+                partisan=stat('PCI'), trade=stat('TPU'), news=stat('NEWS_SENT', low=True), eu_conf=stat('EU_CONF', low=True),
+                migration={c: stat(f'MIGFEAR_{c}') for c in ('US', 'GB', 'DE')})
 
 
 def external(db):

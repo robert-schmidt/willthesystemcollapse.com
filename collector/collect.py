@@ -248,14 +248,14 @@ def shiller(col):
     return [(month(r), v) for (r, c), v in sorted(cells.items()) if c == col and r >= 8 and (r, 0) in cells and month(r) < newest]
 
 
-def xlsx_rows(data):
-    """Rows of the first sheet of an .xlsx as {column letter: text}, shared strings resolved."""
+def xlsx_rows(data, sheet=1):
+    """Rows of one sheet (by position) of an .xlsx as {column letter: text}, shared strings resolved."""
     z = zipfile.ZipFile(io.BytesIO(data))
     ns = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
     shared = [''.join(t.text or '' for t in si.iter(f'{{{ns["m"]}}}t'))
               for si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall('m:si', ns)] if 'xl/sharedStrings.xml' in z.namelist() else []
     out = []
-    for row in ET.fromstring(z.read('xl/worksheets/sheet1.xml')).iter(f'{{{ns["m"]}}}row'):
+    for row in ET.fromstring(z.read(f'xl/worksheets/sheet{sheet}.xml')).iter(f'{{{ns["m"]}}}row'):
         r = {}
         for c in row.findall('m:c', ns):
             v = c.find('m:v', ns)
@@ -288,6 +288,45 @@ def gpr(_):
     # ponytail: dates from March 1900 on (serial 61), where Excel's phantom 29 Feb 1900 no longer shifts them
     return [(f'{date(1899, 12, 30) + timedelta(days=int(v)):%Y-%m}-01', c[r, 4]) for (r, k), v in c.items()
             if k == 0 and v >= 61 and (r, 4) in c]
+
+
+def migration_fear(country):
+    """Baker, Bloom and Davis's migration fear index: newspaper articles about fears of immigration, quarterly since 1990."""
+    rows = epu_file('Migration_Fear_EPU_Data')
+    col = next(k for k, v in rows[0].items() if v == f'{country}_fear_index')
+    return [(f'{int(num(r["A"])):04d}-{3 * int(num(r["B"])) - 2:02d}-01', num(r[col])) for r in rows[1:]
+            if num(r.get('A')) and num(r.get('B')) and num(r.get(col)) is not None]
+
+
+def trade_uncertainty(_):
+    """Caldara, Iacoviello, Molligo, Prestipino and Raffo's trade policy uncertainty, newspapers since 1960, monthly
+    (matteoiacoviello.com, CC BY). Sheet 3 is TPU_MONTHLY: the month as an Excel date in A, the index in E."""
+    rows = xlsx_rows(get('https://www.matteoiacoviello.com/tpu_files/tpu_web_latest.xlsx'), 3)
+    return [(f'{date(1899, 12, 30) + timedelta(days=int(num(r["A"]))):%Y-%m}-01', num(r['E'])) for r in rows
+            if num(r.get('A')) and num(r.get('E')) is not None]
+
+
+def partisan_conflict(_):
+    """Azzimonti's partisan conflict index: newspaper articles on lawmakers' disagreement, monthly since 1981 (Richmond Fed)."""
+    rows = csv.reader(io.StringIO(get('https://www.richmondfed.org/-/media/Files/charts/data/partisan_conflict_index.csv').decode('utf-8-sig')))
+    next(rows)
+    return [(f'{int(y):04d}-{int(m):02d}-01', num(v)) for y, m, v in rows if num(v) is not None]
+
+
+def news_sentiment(_):
+    """San Francisco Fed's Daily News Sentiment Index (Shapiro, Sudhof and Wilson): the tone of economic news, daily since 1980.
+    The bare URL serves a week-old cached copy; the site's own links add a date."""
+    rows = csv.reader(io.StringIO(get(f'https://www.frbsf.org/wp-content/uploads/news-sentiment-chart-1.csv?{date.today()}').decode()))
+    next(rows)
+    return [(f'{d[6:10]}-{d[:2]}-{d[3:5]}', num(v)) for d, v in rows if num(v) is not None]
+
+
+def eu_confidence(_):
+    """European Commission consumer confidence, EU, monthly since 1985 (Eurostat ei_bsco_m; balance of answers, seasonally adjusted)."""
+    d = json.loads(get('https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/ei_bsco_m'
+                       '?geo=EU27_2020&indic=BS-CSMCI&s_adj=SA&unit=BAL&format=JSON'))
+    t = {i: k for k, i in d['dimension']['time']['category']['index'].items()}
+    return sorted((f'{t[int(i)]}-01', v) for i, v in d['value'].items())
 
 
 @functools.lru_cache(maxsize=None)
@@ -486,6 +525,14 @@ SERIES = {
     'GPR_H': (gpr, None, W, 'Geopolitical risk, newspapers (since 1900)', 'Caldara and Iacoviello, Federal Reserve Board (CC BY 4.0)'),
     'UNREST_WORLD': (unrest_world, None, W, 'Countries with major social unrest in the last 12 months', 'IMF Reported Social Unrest Index'),
     **{f'UNREST_{c}': (unrest, c, W, f'{c}: news coverage of social unrest', 'IMF Reported Social Unrest Index') for c in UNREST_COUNTRIES},
+    # shown only: tested in October 2026, none made crisis warning better
+    'PCI': (partisan_conflict, None, M, 'US partisan conflict, newspapers', 'Azzimonti, Federal Reserve Bank of Richmond'),
+    **{f'MIGFEAR_{c}': (migration_fear, name, W, f'{label}: migration fear, newspapers', 'Baker, Bloom and Davis, policyuncertainty.com')
+       for c, name, label in (('US', 'usa', 'US'), ('GB', 'uk', 'UK'), ('DE', 'germany', 'Germany'))},
+    'TPU': (trade_uncertainty, None, M, 'US trade policy uncertainty, newspapers (since 1960)',
+            'Caldara, Iacoviello, Molligo, Prestipino and Raffo, matteoiacoviello.com (CC BY)'),
+    'NEWS_SENT': (news_sentiment, None, D, 'Tone of US economic news', 'Shapiro, Sudhof and Wilson, Federal Reserve Bank of San Francisco'),
+    'EU_CONF': (eu_confidence, None, M, 'EU consumer confidence', 'European Commission via Eurostat'),
 }
 INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 

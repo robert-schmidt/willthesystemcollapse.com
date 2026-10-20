@@ -51,4 +51,8 @@ assert score.ago(db, 'D') == 1.0 and score.ago(db, 'none') is None
 # unrest: a country counts for 12 months after a major event, once however many events
 ev = {'A': [(f'{2020 + m // 12}-{m % 12 + 1:02d}-01', int(m in (0, 1))) for m in range(14)], 'B': [('2021-01-01', 1), ('2021-02-01', 0)]}
 assert collect.unrest_count(ev) == [('2020-12-01', 1), ('2021-01-01', 2), ('2021-02-01', 1)], collect.unrest_count(ev)
+# society: news tone and confidence report their low as the record; percentiles rank the latest value in its own history
+db.executemany('INSERT INTO obs VALUES (?,?,?)', [('NEWS_SENT', f'2026-0{i}-01', v) for i, v in enumerate((0.1, -0.5, 0.3, 0.2), 1)])
+n = score.society(db)['news']
+assert (n['max'], n['max_month'], n['pct']) == (-0.5, '2026-02', 62), n  # mid-rank: 2.5 of 4
 print('ok')
