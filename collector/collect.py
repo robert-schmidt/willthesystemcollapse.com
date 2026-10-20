@@ -581,9 +581,9 @@ def summary(r):
              if high else 'no red flags')
     above = [k for k in ('crisis_24m', 'recession_24m', 'bear_24m') if od[k]['like'] is not None and od[k]['like'] - od[k]['base'] >= 10]
     c, s = od['crisis_24m'], od['severe_24m']
-    horizon = (f"Over two years the odds are above average: {c['like']}% of months like this saw a crisis start within 24 months "
-               f"(average {c['base']}%), mostly milder ones; {s['like']}% a severe one (average {s['base']}%)."
-               if above else 'Over two years the odds are about average.')
+    horizon = ('Over two years the odds are about average.' if c['like'] is None else
+               f"Over two years the odds are {'above' if above else 'close to'} average: {c['like']}% of months like this saw a "
+               f"crisis start within 24 months (average {c['base']}%), mostly milder ones; {s['like']}% a severe one (average {s['base']}%).")
     return (f"Score {r['score']:.0f}/100 ({r['band']['label'].lower()}). Markets are {mood} (stress {p['stress']:.0f}) and "
             f"recession risk over the next 12 months is {r['forecast']['probability']:.0f}%. The foundations are {base}: "
             f"structural risk is {r['structural']:.0f}/100, higher than in {sr['pct']}% of months since 1973, with {flags}. {horizon}")
