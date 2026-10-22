@@ -17,7 +17,7 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   The acceptance rule (rule C, adopted 2026-10-22; the baseline is always the live version). Stage 1, information: among months
   the score already rates alike (its quintiles), the candidate's stratified AUC on its pillar's own job (stress: a crisis
   under way; build-up, fiscal, money: a crisis starting within 24 months) beats the 99th percentile of random autocorrelated
-  series (0.677 and 0.707 on today's data; recalibrate when the score changes) and is ≥ 0.5 in 1973–99 and in 2000+.
+  series (v8: 0.687 and 0.718; v7 was 0.677 and 0.707; recalibrate when the score changes) and is ≥ 0.5 in 1973–99 and in 2000+.
   Stage 2, no harm: added at standard theme weight, no target (crisis under way, crisis 12/24, recession 12, severe 12, 20%
   fall 12 months ahead) down more than 0.02, and ≥ 70 still ≥ 90% near a crisis. Calibrated on placebos and synthetic
   signals only: 1–2.5% false alarms; accepts a strong new signal (own AUC 0.77–0.83) 13–19 times in 20. The old rule
@@ -41,7 +41,8 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   but random slow series added as a stress theme gain up to +0.019 and pass the CI check (why rule C replaced the old rule).
   Under rule C, 10 of 61 rebuilt candidates since v6 passed (1.2 expected by chance): news tone, all-loan and mortgage
   delinquencies, EU confidence, unrest coverage (stress); household credit 3y, low saving 12m, calm news (build-up);
-  household credit, debt service (fiscal). Not yet in the score: waiting on the owner's call on the two-question split.
+  household credit, debt service (fiscal). In the score since v8 (2026-10-22): grouped by meaning into five themes, v8 beat v7
+  on five of six targets (crisis under way +0.016, severe +0.019, recession +0.011; 20% falls −0.008) in both eras.
   Reverse test: most money and fiscal themes add no crisis timing beyond the rest (stratified AUC 0.37–0.67). Unrest study (IMF RSUI × OECD, 46 countries, 1991–2025): strain didn't come before flare-ups (AUC 0.42–0.53);
   unrest came before weaker jobs and stocks only before 2008. All shown in the households panel, outside the score.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
@@ -63,11 +64,16 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
 Each component becomes a percentile vs its own monthly history (expanding window, ≥ 60 months, each input
 forward-filled ≤ 6 months so history matches the live reading; quarterly/annual series placed at their publication month,
 `LAGS` in score.py). Pillars are theme-balanced means (`THEME_WEIGHTS` for exceptions): stress (incl. CP − bill and
-VIX/VIX3M dislocations, and US + Europe policy uncertainty in the news at double weight since v7), warning (the
-walk-forward recession model's percentile), money, fiscal, build-up (BIS 3y Δ private credit/GDP, Baa−10y from 24 months
-earlier, geopolitical calm: minus the 12-month mean of Caldara–Iacoviello GPRH, as calm years came before crises).
+VIX/VIX3M dislocations, US + Europe policy uncertainty in the news at double weight since v7, and since v8 loan
+delinquencies and the mood: news tone, EU confidence, unrest in the news), warning (the
+walk-forward recession model's percentile), money, fiscal (since v8 with household credit and debt payments), build-up
+(BIS 3y Δ private credit/GDP, Baa−10y from 24 months earlier, geopolitical calm: minus the 12-month mean of Caldara–Iacoviello
+GPRH, as calm years came before crises; since v8 household credit 3y Δ with 12-month low saving, and calm news). `sustain()`
+(outside the score) is the main question's arithmetic: debt path scenarios, the deficit that holds debt steady, inflation's
+erosion, who holds Treasuries (TIC), the dollar's reserve share (COFER), world central-bank gold, dilution since 1971; the
+summary opens with it.
 Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical
-crisis odds change (75+ = 1973–74, 1980, 2008–09 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
+crisis odds change (75+ = 1973–74, 1979–80, 2008 only). `unusual()` and `pairs()` raise awareness (records, sudden weekly
 moves, markets that should agree, incl. the SHFE gold premium) without entering the score. `outlook()` (also outside the
 score) is the expected 10-year real stock return: walk-forward OLS on log CAPE and the excess CAPE yield (Shiller's
 ie_data.xls via `xls_min.py`), averaged; ratios beyond any known 10-year outcome are shown, never modelled. Shiller's

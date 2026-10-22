@@ -362,6 +362,68 @@ def dfa_wealth(groups):
     return sorted(out.items())
 
 
+_weo = {}
+
+
+def imf_weo(arg):
+    """IMF World Economic Outlook via DataMapper, annual (later years are IMF projections). arg = (indicator, country)."""
+    ind, c = arg
+    if ind not in _weo:
+        _weo[ind] = json.loads(get(f'https://www.imf.org/external/datamapper/api/v1/{ind}'))['values'][ind]
+    return [(f'{y}-12-31', v) for y, v in _weo[ind].get(c, {}).items() if v is not None]
+
+
+def wb_series(arg):
+    """One World Bank indicator for one country or aggregate, annual (CC BY 4.0). arg = (indicator, country)."""
+    ind, country = arg
+    r = json.loads(get(f'https://api.worldbank.org/v2/country/{country}/indicator/{ind}?format=json&per_page=200'))[1] or []
+    return [(f"{x['date']}-12-31", x['value']) for x in r if x['value'] is not None]
+
+
+TIC = 'https://ticdata.treasury.gov/resource-center/data-chart-center/tic/Documents/'
+TIC_ROWS = {'TOTAL': ('Grand Total', 'Total'), 'OFFICIAL': ('For. Official', 'Of Which: Foreign Official'),
+            'CHN': ('China, Mainland',), 'JPN': ('Japan',)}
+
+
+@functools.lru_cache(maxsize=1)
+def tic_tables():
+    """US Treasury's major foreign holders of Treasuries, $bn: the history file (2000 on, a block per year) and table 5 (the
+    latest 13 months). Both tab-separated, first column the holder, months in the header rows."""
+    out = {}
+    MON = {m: i for i, m in enumerate(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 1)}
+    for name in ('mfhhis01.txt', 'slt_table5.txt'):
+        rows = [[x.strip().strip('"') for x in r.split('\t')] for r in get(TIC + name).decode('latin-1').splitlines()]
+        months = []
+        for i, r in enumerate(rows):
+            if r[0] == 'Country':
+                if any(re.fullmatch(r'\d{4}-\d{2}', x) for x in r):  # table 5: 2026-08
+                    months = [f'{x}-01' for x in r[1:] if re.fullmatch(r'\d{4}-\d{2}', x)]
+                else:  # history: months on the row above, years on this one
+                    months = [f'{int(y):04d}-{MON[m]:02d}-01' for m, y in zip([x for x in rows[i - 1][1:] if x in MON], [x for x in r[1:] if x.isdigit()])]
+            elif months and r[0]:
+                for d, x in zip(months, r[1:]):
+                    if num(x) is not None:
+                        out.setdefault(r[0], {})[d] = num(x)
+    return out
+
+
+def tic(key):
+    t = tic_tables()
+    return sorted({d: v for name in TIC_ROWS[key] for d, v in t.get(name, {}).items()}.items())
+
+
+def cofer(ccy):
+    """Share of the world's allocated foreign-exchange reserves held in a currency, %, quarterly since 1999 (IMF COFER)."""
+    raw = get(f'https://api.imf.org/external/sdmx/2.1/data/IMF.STA,COFER/G001.AFXRA.CI_{ccy}.SHRO_PT.Q?detail=dataonly',
+              {'Accept': 'application/vnd.sdmx.data+csv;version=1.0.0'}).decode()
+    out = []
+    for r in csv.DictReader(io.StringIO(raw)):
+        y, q = r['TIME_PERIOD'].split('-Q')
+        if num(r['OBS_VALUE']) is not None:
+            out.append((f'{y}-{3 * int(q) - 2:02d}-01', num(r['OBS_VALUE'])))
+    return out
+
+
 @functools.lru_cache(maxsize=None)
 def rsui(key):
     """IMF Reported Social Unrest Index (Barrett, Appendino, Nguyen and de Leon Miranda), from media reports, monthly:
@@ -376,12 +438,13 @@ def rsui(key):
     return out
 
 
-UNREST_COUNTRIES = ['USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL']
+UNREST_COUNTRIES = ['USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL']  # shown by country
+UNREST_ADVANCED = UNREST_COUNTRIES + ['BEL', 'GRC', 'PRT', 'SWE', 'AUT', 'IRL', 'DNK', 'FIN', 'JPN', 'CAN', 'AUS']  # for the score (v8)
 
 
 def unrest(country):
     """One country's share of news about protests, riots and strikes (IMF index)."""
-    return sorted(rsui('+'.join(UNREST_COUNTRIES) + '.HEADLINE.M')[country])
+    return sorted(rsui('+'.join(UNREST_ADVANCED) + '.HEADLINE.M')[country])
 
 
 def unrest_count(events):
@@ -557,7 +620,7 @@ SERIES = {
                               ('GB', 'UK', 'UK'), ('IT', 'Italy', 'Italy'), ('ES', 'Spain', 'Spain'))},
     'GPR_H': (gpr, None, W, 'Geopolitical risk, newspapers (since 1900)', 'Caldara and Iacoviello, Federal Reserve Board (CC BY 4.0)'),
     'UNREST_WORLD': (unrest_world, None, W, 'Countries with major social unrest in the last 12 months', 'IMF Reported Social Unrest Index'),
-    **{f'UNREST_{c}': (unrest, c, W, f'{c}: news coverage of social unrest', 'IMF Reported Social Unrest Index') for c in UNREST_COUNTRIES},
+    **{f'UNREST_{c}': (unrest, c, W, f'{c}: news coverage of social unrest', 'IMF Reported Social Unrest Index') for c in UNREST_ADVANCED},
     # shown only: tested in October 2026, none made crisis warning better
     'PCI': (partisan_conflict, None, M, 'US partisan conflict, newspapers', 'Azzimonti, Federal Reserve Bank of Richmond'),
     **{f'MIGFEAR_{c}': (migration_fear, name, W, f'{label}: migration fear, newspapers', 'Baker, Bloom and Davis, policyuncertainty.com')
@@ -579,6 +642,25 @@ SERIES = {
     'TYPICAL_PAY': (epi_productivity, 'comp_private_real_index_1948', W, 'Typical worker pay after inflation (1948 = 100)', 'Economic Policy Institute'),
     'WEALTH_TOP1': (dfa_wealth, ('TopPt1', 'RemainingTop1'), W, 'Top 1% share of household wealth', 'Federal Reserve Distributional Financial Accounts'),
     'WEALTH_BOTTOM50': (dfa_wealth, ('Bottom50',), W, 'Bottom 50% share of household wealth', 'Federal Reserve Distributional Financial Accounts'),
+    # v8 (passed the acceptance rule in October 2026): loan defaults, household credit and debt payments, saving
+    'DELINQ_ALL': (fred, 'DRALACBS', M, 'Delinquency rate, all bank loans', 'Federal Reserve via FRED'),
+    'DELINQ_MORTGAGE': (fred, 'DRSFRMACBS', M, 'Delinquency rate, residential mortgages', 'Federal Reserve via FRED'),
+    'HH_CREDIT_BIS': (fred, 'QUSHAM770A', M, 'Credit to households, % of GDP', 'Bank for International Settlements via FRED'),
+    'DSR_OLD': (fred, 'FODSP', W, 'Household financial obligations, % of income (to 2023)', 'Federal Reserve via FRED'),
+    # how long can it go on: the federal arithmetic, who lends to the US, the dollar's place, dilution
+    'DEBT_PUBLIC': (fred, 'FYGFDPUN', M, 'Federal debt held by the public', 'US Treasury via FRED'),
+    'NET_INTEREST_GDP': (fred, 'FYOIGDA188S', W, 'Federal net interest, % of GDP (fiscal year)', 'OMB via FRED'),
+    'RECEIPTS_GDP': (fred, 'FYFRGDA188S', W, 'Federal receipts, % of GDP (fiscal year)', 'OMB via FRED'),
+    'NET_ISSUANCE': (fred, 'NCBCEBQ027S', M, 'Net share issuance, nonfinancial companies (annual rate)', 'Federal Reserve Z.1 via FRED'),
+    **{f'TIC_{k}': (tic, k, M, f'Treasuries held abroad: {name}, $bn', 'US Treasury, Treasury International Capital')
+       for k, name in (('TOTAL', 'all foreign holders'), ('OFFICIAL', 'foreign central banks and governments'), ('CHN', 'China'), ('JPN', 'Japan'))},
+    **{f'COFER_{c}': (cofer, c, W, f'{c} share of world foreign-exchange reserves, %', 'IMF COFER') for c in ('USD', 'EUR', 'CNY')},
+    'CB_GOLD_WORLD': (imf_gold, 'G001', W, 'World central-bank gold, million oz', 'IMF International Liquidity'),
+    # the balance of power: shares of world output (market prices and purchasing power) and of military spending
+    **{f'GDPUSD_WEO_{c}': (imf_weo, ('NGDPD', c), W, f'{c} GDP, $bn (IMF; later years projected)', 'IMF World Economic Outlook') for c in ('USA', 'CHN', 'WEOWORLD')},
+    **{f'GDPPPP_SHARE_{c}': (imf_weo, ('PPPSH', c), W, f'{c} share of world GDP at purchasing power, % (IMF)', 'IMF World Economic Outlook') for c in ('USA', 'CHN')},
+    **{f'MILITARY_{c}': (wb_series, ('MS.MIL.XPND.CD', c), W, f'{c} military spending, USD', 'SIPRI via World Bank (CC BY 4.0)') for c in ('USA', 'CHN', 'WLD')},
+    **{f'MANUF_{c}': (wb_series, ('NV.IND.MANF.CD', c), W, f'{c} manufacturing value added, USD', 'UN / World Bank (CC BY 4.0)') for c in ('USA', 'CHN', 'WLD')},
 }
 INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 
@@ -630,7 +712,18 @@ def summary(r):
     horizon = ('Over two years the odds are about average.' if c['like'] is None else
                f"Over two years the odds are {'above' if above else 'close to'} average: {c['like']}% of months like this saw a "
                f"crisis start within 24 months (average {c['base']}%), mostly milder ones; {s['like']}% a severe one (average {s['base']}%).")
-    return (f"Score {r['score']:.0f}/100 ({r['band']['label'].lower()}). Markets are {mood} (stress {p['stress']:.0f}) and "
+    s = r.get('sustain')
+    lasting = ''
+    if s:  # the main question first: can this go on?
+        normal = next((x for x in s['scenarios'] if x['key'] == 'normal'), None)
+        gap = s['primary'] - s['stabilising']
+        trend = (f"holds steady only while the economy grows {s['growth']:.0f}% a year in dollars, much of it inflation" if gap <= 0.3 else
+                 f"is rising by about {gap:.1f}% of GDP a year")
+        when = f"; at normal growth, interest would take 30% of federal revenue by {normal['cross30']}" if normal and normal['cross30'] else ''
+        verdict = 'Not on current settings' if normal and normal['cross30'] and normal['cross30'] - int(s['debt_date'][:4]) <= 15 else 'For now'
+        lasting = f"Sustainable? {verdict}: US federal debt is {s['debt']:.0f}% of GDP and {trend}{when}. "
+    now = {'NO': 'No', 'NOT YET': 'Not yet', 'WOBBLING': 'Wobbling', 'YES': 'Yes'}.get(r['band']['answer'], r['band']['answer'].capitalize())
+    return (f"{lasting}Breaking now? {now}: score {r['score']:.0f}/100 ({r['band']['label'].lower()}), markets are {mood} (stress {p['stress']:.0f}) and "
             f"recession risk over the next 12 months is {r['forecast']['probability']:.0f}%. The foundations are {base}: "
             f"structural risk is {r['structural']:.0f}/100, higher than in {sr['pct']}% of months since 1973, with {flags}. {horizon}")
 

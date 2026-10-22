@@ -23,9 +23,14 @@ once = collect.fill(strip, 'flag-strip', raw='<a><b>x</b></a>')
 assert collect.fill(once, 'flag-strip', raw='<a><b>y</b></a>') == strip.replace('></div>', '><a><b>y</b></a></div>')  # idempotent
 # the summary must not call solid foundations weak
 odd = dict(like=20, base=20)
-r = dict(score=30, band=dict(label='Normal'), pillars=dict(stress=20), forecast=dict(probability=5), structural=30,
+r = dict(score=30, band=dict(label='Normal', answer='NO'), pillars=dict(stress=20), forecast=dict(probability=5), structural=30,
          structural_rank=dict(pct=25), flags=dict(high=[]), odds=dict(crisis_24m=odd, recession_24m=odd, bear_24m=odd, severe_24m=odd))
 assert 'foundations are solid' in collect.summary(r) and 'no red flags' in collect.summary(r), collect.summary(r)
+# ...and it answers the main question first: debt held steady by growth, interest at 30% of revenue within 15 years
+r['sustain'] = dict(primary=2.6, stabilising=2.6, growth=6.3, debt=97.4, debt_date='2026-04', scenarios=[dict(key='normal', cross30=2035)])
+assert collect.summary(r).startswith('Sustainable? Not on current settings: US federal debt is 97% of GDP and holds steady only while'), collect.summary(r)
+r['sustain'].update(stabilising=0.5)
+assert 'is rising by about 2.1% of GDP a year' in collect.summary(r), collect.summary(r)
 # unusual: a level not seen in 20+ years is flagged, a recent dip from a fresh record still counts, a gap is passed through
 db = collect.connect(':memory:')
 C = {'old': dict(label='A', now=('2026-10-01', 5.0), hist={'1990-01': 6.0, '2000-01': 4.0, '2026-09': 4.5}),
@@ -65,4 +70,8 @@ db.executemany('INSERT INTO obs VALUES (?,?,?)', [('HOME_PRICE', '1970-01-01', 2
                                                   ('WAGES', '2000-01-01', 10.0), ('HOME_PRICE', '2026-04-01', 416000.0), ('WAGES', '2026-04-01', 40.0)])
 y = score.households(db)['years_pay']
 assert (y['then'], y['then_year'], y['now'], y['worst'], y['worst_date'], y['bad']) == (4.0, '1970', 5.0, 8.0, '2000-01', 50), y
+# the debt arithmetic: interest equal to growth and no deficit holds debt flat; a 2-point deficit adds 2 points a year
+flat = score.debt_path(100.0, 4.0, 4.0, 0.0, 17.0, 4.0, years=5)
+assert all(abs(d - 100) < 1e-9 for _, d, _ in flat) and abs(flat[0][2] - 4 / 17) < 1e-9, flat
+assert abs(score.debt_path(100.0, 4.0, 4.0, 2.0, 17.0, 4.0, years=3)[-1][1] - 106) < 1e-9
 print('ok')
