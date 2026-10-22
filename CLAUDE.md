@@ -14,8 +14,16 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   after v6: delinquencies (cards, consumer, all loans, mortgages, NY Fed auto), ACM term premium (level, change), the
   expectations spread or Engstrom–Sharpe forward spread in the recession model, Italy−Germany 10y, real 10y yield, its
   12-month change, "vigilantes" (10y up while the Fed cuts).
-  The acceptance rule (written for v6; the baseline is always the live version, never v6): crisis ahead-24 AUC +0.03 with a 60-month block-bootstrap 90% CI above
-  0; recession and severe ahead-12 down no more than 0.02; ≥ 70 band still ≥ 90% near a crisis; gain in 1973–99 and 2000+.
+  The acceptance rule (rule C, adopted 2026-10-22; the baseline is always the live version). Stage 1, information: among months
+  the score already rates alike (its quintiles), the candidate's stratified AUC on its pillar's own job (stress: a crisis
+  under way; build-up, fiscal, money: a crisis starting within 24 months) beats the 99th percentile of random autocorrelated
+  series (0.677 and 0.707 on today's data; recalibrate when the score changes) and is ≥ 0.5 in 1973–99 and in 2000+.
+  Stage 2, no harm: added at standard theme weight, no target (crisis under way, crisis 12/24, recession 12, severe 12, 20%
+  fall 12 months ahead) down more than 0.02, and ≥ 70 still ≥ 90% near a crisis. Calibrated on placebos and synthetic
+  signals only: 1–2.5% false alarms; accepts a strong new signal (own AUC 0.77–0.83) 13–19 times in 20. The old rule
+  (crisis ahead-24 +0.03, CI > 0, gains in both eras) accepted 0 of 300 random series but also 0 of 20 such signals: a new
+  theme carries ~1/24 of the score, so a whole-score AUC test only measures dilution. Run every candidate once, in the
+  pillar its meaning says, and report the expected chance passes (2% × tries). Scripts: that session's calib*.py, retest.py.
   v7 exception (the owner's call, 2026-10-20): policy uncertainty and geopolitical risk went in under a no-harm rule set before
   the test (crisis ahead-24 down ≤ 0.01 with its CI including 0; recession/severe ahead-12 down ≤ 0.02; ≥ 70 band ≥ 90%; no
   era down > 0.02). EPU's theme weight 2 is the most at which crisis ahead-24 stayed ≥ v6 (3 lost ground): don't raise it
@@ -30,8 +38,11 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   price ÷ pay or family income, mortgage payment ÷ pay, price ÷ rent, real house prices, household credit and debt service,
   misery index, real wages, UMich sentiment, saving rate, labour share, productivity–pay gap, CEO pay, Gini, top 1% wealth)
   and their strain composite (crisis ahead-24 0.57 alone). Best +0.021 (household credit 3y, debt service, as stress themes),
-  but random slow series added as a stress theme gain up to +0.019 and pass the CI check: a candidate must also beat that
-  placebo. Unrest study (IMF RSUI × OECD, 46 countries, 1991–2025): strain didn't come before flare-ups (AUC 0.42–0.53);
+  but random slow series added as a stress theme gain up to +0.019 and pass the CI check (why rule C replaced the old rule).
+  Under rule C, 10 of 61 rebuilt candidates since v6 passed (1.2 expected by chance): news tone, all-loan and mortgage
+  delinquencies, EU confidence, unrest coverage (stress); household credit 3y, low saving 12m, calm news (build-up);
+  household credit, debt service (fiscal). Not yet in the score: waiting on the owner's call on the two-question split.
+  Reverse test: most money and fiscal themes add no crisis timing beyond the rest (stratified AUC 0.37–0.67). Unrest study (IMF RSUI × OECD, 46 countries, 1991–2025): strain didn't come before flare-ups (AUC 0.42–0.53);
   unrest came before weaker jobs and stocks only before 2008. All shown in the households panel, outside the score.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
