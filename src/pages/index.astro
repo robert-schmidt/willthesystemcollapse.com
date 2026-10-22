@@ -98,6 +98,7 @@ const ld = {
       <a href="#history-s">50 years</a>
       <a href="#outlook-s">Long run</a>
       <a href="#society-s">Society</a>
+      <a href="#households-s">Households</a>
       <a href="#cases-s">Past crises</a>
       <a href="#forecast-s">Recession model</a>
       <a href="#lead-s">Before crises</a>
@@ -206,14 +207,40 @@ const ld = {
       </div>
     </section>
 
+    <section class="section" id="households-s">
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">07</span>Households · not in the score</p><h2 class="section-title">What a pay cheque buys, 1970 and now</h2></div>
+        <p class="lede">House prices against pay, the cost of a mortgage, the misery index, how people feel, how much they save, and who gets what. All official figures, each against its own history. Tested against fifty years of crises and 35 years of unrest in 46 countries, none of it warned of either, so it is shown here and not scored.</p></header>
+      <div class="outlook-grid tiles">
+        <div class="card ol"><p class="ov" id="hh-strain">--</p><p class="ot">Household strain index, 0–100: housing, prices and jobs, mood, savings and fairness against their own history</p><p class="muted tiny" id="hh-strain-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="hh-years">--</p><p class="ot">Years of a typical worker's full-time pay to buy the median new home</p><p class="muted tiny" id="hh-years-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="hh-ceo">--</p><p class="ot">CEO pay against a typical worker's (Economic Policy Institute)</p><p class="muted tiny" id="hh-ceo-note">&nbsp;</p></div>
+        <div class="card ol"><p class="ov" id="hh-gap">--</p><p class="ot">Output per hour against a typical worker's pay after inflation, since 1970</p><p class="muted tiny" id="hh-gap-note">&nbsp;</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>1970 and now</h3><span class="meta">red: worse than 85% of its own history</span></div>
+          <table class="mini" id="hh-table"></table>
+          <p class="small muted">A typical worker: production and non-supervisory employees, about four in five private jobs, paid for 40 hours a week. The mortgage assumes 20% down and a 30-year fixed loan at Freddie Mac's average rate. Where a series starts after 1970, its first year is shown.</p>
+        </div>
+        <div class="card prose-card">
+          <div class="card-head"><h3>Household strain since <span id="hh-since">1964</span></h3><span class="meta">yearly average · not in the score</span></div>
+          <svg id="hh-chart" role="img" aria-label="Household strain index by year"></svg>
+          <p class="muted small"><b>Not in the score.</b> Every measure here was tested in October 2026 like any other input. Added to the score, none made crisis, recession or severe-crisis warning better than adding a random series did: random slow-moving series raise crisis warning two years ahead by up to 0.02 of AUC, and the best of these, household credit growth and debt service, by 0.021. On its own the strain index warned of crises two years ahead at an AUC of 0.57, against the score's 0.87. Inside the recession model, none helped either.</p>
+          <p class="muted small"><b>Does strain lead to unrest? Not in the data.</b> Across 46 countries since 1991 (the IMF's unrest index against each country's unemployment, inflation, misery index, food prices and consumer confidence), none of these came before flare-ups more often than chance (AUC 0.42 to 0.53), in 1991–2007 or after. In the US the strain index did no better than a coin flip on the ten flare-ups since 1994, George Floyd and Dobbs among them. Unrest tends to follow a trigger, such as a killing, a court ruling, a reform or an election, rather than the slow build-up these numbers measure.</p>
+          <p class="muted small"><b>Does unrest hurt the economy?</b> Before 2008, in the year after a flare-up, unemployment rose 0.2 points more than usual and stocks did about 5% worse, but that unrest mostly came with crises already under way (Argentina and Turkey in 2001). Since 2008 there is no measurable effect, and in no period did flare-ups come before 20% stock falls. Read this panel as how stretched households are, not as a forecast.</p>
+          <p class="muted tiny">Sources: US Census Bureau, BLS, BEA and FHFA via FRED; Freddie Mac (mortgage rates); University of Michigan Surveys of Consumers; Federal Reserve (debt service; Distributional Financial Accounts); the Economic Policy Institute's State of Working America Data Library (CEO pay, productivity and pay); IMF Reported Social Unrest Index and OECD (the unrest study).</p>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="cases-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">07</span>Concrete examples</p><h2 class="section-title">What it said before, during and after</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">08</span>Concrete examples</p><h2 class="section-title">What it said before, during and after</h2></div>
         <p class="lede">Ten moments from the last fifty years, scored with only the data that existed at the time.</p></header>
       <div class="cases tiles" id="case-list"></div>
     </section>
 
     <section class="section" id="forecast-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">08</span>The early-warning model</p><h2 class="section-title">Recession probability, next 12 months: <span class="gold" id="fc-prob">--</span></h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">09</span>The early-warning model</p><h2 class="section-title">Recession probability, next 12 months: <span class="gold" id="fc-prob">--</span></h2></div></header>
       <div class="grid-3">
         <div class="card prose-card">
           <p>
@@ -235,7 +262,7 @@ const ld = {
     </section>
 
     <section class="section" id="lead-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">09</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">10</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
         <p class="lede">Every crisis and 20% stock-market fall since 1973, lined up on the month it started. Market gauges stay ordinary until the month trouble hits; the signals that move earlier are in the economy and the credit cycle. None of them can see an overnight crash coming.</p></header>
       <div class="grid-2">
         <div class="card">
@@ -252,7 +279,7 @@ const ld = {
     </section>
 
     <section class="section" id="stag-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">10</span>Inflation, the Fed and the worst cases</p><h2 class="section-title">Stagflation, or worse?</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>Inflation, the Fed and the worst cases</p><h2 class="section-title">Stagflation, or worse?</h2></div>
         <p class="lede"><strong>Stagflation</strong> is inflation that stays high while the economy weakens: the 1970s, 1980–82, briefly 1990 and 2008. We define it as inflation of 5% or more while unemployment has risen at least half a point from its 12-month low.</p></header>
       <div class="grid-3">
         <div class="card">
@@ -280,7 +307,7 @@ const ld = {
     </section>
 
     <section class="section" id="markets-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>Same metal, many markets</p><h2 class="section-title">Gold, priced everywhere at once</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">12</span>Same metal, many markets</p><h2 class="section-title">Gold, priced everywhere at once</h2></div>
         <p class="lede">No government sets the price of gold. It trades around the clock in London, New York, Shanghai, Zurich, Mumbai and on-chain, and arbitrage keeps every venue within a few dollars of the others. When a venue drifts, metal flows to it; a dislocation is an early sign that a market is breaking.</p></header>
       <div class="grid-2">
         <div class="card">
@@ -299,7 +326,7 @@ const ld = {
     </section>
 
     <section class="section" id="debt-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">12</span>The fiscal fuse</p><h2 class="section-title">Debt keeps compounding</h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">13</span>The fiscal fuse</p><h2 class="section-title">Debt keeps compounding</h2></div></header>
       <div class="card debt-counter">
         <p class="eyebrow">US federal debt · live estimate</p>
         <p class="counter" id="counter">$--</p>
@@ -326,7 +353,7 @@ const ld = {
     </section>
 
     <section class="section method" id="method-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">13</span>How it works</p><h2 class="section-title">The method, in plain English</h2></div></header>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">14</span>How it works</p><h2 class="section-title">The method, in plain English</h2></div></header>
       <div class="steps tiles">
         <div class="card step">
           <span class="step-n">1</span><h3>Collect</h3>
@@ -369,6 +396,7 @@ const ld = {
           <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which keeps it to 1974, 1980 and 2008–09. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
           <li><strong>v7 · Policy uncertainty and geopolitics.</strong> Two newspaper-based measures joined at the owner's request, under a no-harm rule set before testing: the score could not get worse at warning of crises, recessions or severe crises, and neither 1973–99 nor 2000+ could lose ground. Policy uncertainty in the US and Europe (Baker, Bloom and Davis) is a stress theme at double weight: it rises as trouble arrives and flags crises under way about as well as unemployment does, and double was the most weight history allowed before crisis warning two years ahead fell below v6 (triple lost ground). Geopolitical risk (Caldara and Iacoviello, since 1900) went in the other way round: calm years came before crises and recessions far more often than tense ones, a pattern found in 1905–72 and confirmed after 1973, so a calm past year now adds to build-up. Together they improved crisis warning two years ahead slightly (AUC 0.863 → 0.870).</li>
           <li><strong>Correction after v7 · smoother odds cards.</strong> The cards counted only months within 3 points of today's score, so a one-point move could swing them by 10 points or more. Every month now counts, weighted by how close its score was (half weight 6 points away). Tested walk-forward since 1990 against windows of ±3, ±5 and ±8 points, other weightings and a fitted curve: it predicted what followed better than the ±3 window on all five cards (Brier score 3–8% lower), and the odds move a quarter to a half less per point. At a score of 51: a crisis within two years 64% → 57%, a severe one 25% → 19%. The score is unchanged.</li>
+          <li><strong>Research after v7 · households, inequality and unrest.</strong> Tested against the acceptance rule, with the live v7 score as the baseline: house prices against pay and family income, the mortgage payment on a median home against pay, house prices against rents, real house-price growth, household credit and debt service, the misery index, real wages, consumer sentiment, the saving rate, labour's share of income, the productivity-pay gap, CEO-to-worker pay, the Gini index and the top 1%'s share of wealth, each in every pillar, as levels and as changes, and inside the recession model. None passed. The best, household credit growth and debt service as stress themes, added 0.021 to crisis warning two years ahead, but random slow-moving series added that way gain up to 0.019, so the gain is the market gauges being diluted, not information (a check now run on every candidate). A household strain index built from these did no better (crisis warning 0.57 on its own, against the score's 0.87). A study of 46 countries since 1991 then asked whether strain leads to unrest and unrest to economic damage: unemployment, inflation, the misery index, food prices and consumer confidence came before the IMF's unrest flare-ups no more often than chance, before 2008 or after; unrest was followed by weaker jobs and stocks before 2008 (mostly unrest during crises already under way) and by nothing measurable since. The measures are shown in the households panel, outside the score.</li>
           <li><strong>Research after v7 · polarisation, migration, trade, news tone, Europe's mood.</strong> Tested against the acceptance rule with the live v7 score as the baseline: partisan conflict (Azzimonti), migration fear (US, UK, Germany), trade policy uncertainty, the tone of economic news (San Francisco Fed), EU consumer confidence, stock-market volatility in the news, and policy uncertainty about sovereign debt and about monetary policy, each as a stress theme; calm forms of news tone, confidence, volatility news and partisan conflict in build-up; and news tone inside the recession model. The best, volatility news and debt uncertainty together, added 0.011 to crisis warning two years ahead, against the 0.03 the rule asks for, with a confidence range that includes zero, and it was the best two of fifteen tries. News tone flags crises under way better than any other newspaper measure (AUC about 0.9), but the stress pillar already knows from markets, and inside the recession model it made out-of-sample accuracy worse (0.89 to 0.81–0.85). All are shown in the society panel, outside the score.</li>
           <li><strong>Research for v7 · society and politics.</strong> Tested and rejected: policy uncertainty and geopolitical risk inside the recession model (out-of-sample accuracy the same or worse, with unstable signs), geopolitical risk as a measure of stress now (it flags crises under way barely better than chance), global policy uncertainty and the IMF's World Uncertainty Index (no meaningful gain anywhere), and social unrest (IMF). Unrest's one pass, the number of countries with major unrest rising over a year, came entirely from the 2019 protest wave before Covid and the Arab Spring before the 2011 euro crisis, and the IMF dates its events partly with hindsight; it is shown above, outside the score. Election results (ParlGov) stop in June 2023, too stale for a live monitor.</li>
           <li><strong>Correction after v6 · the odds cards.</strong> "What followed months like this one" counted months already inside a crisis (and months inside a recession, as if none had started), which overstated the crisis odds for a month like today, when none is under way. The cards now compare only months not already in the event (20 October 2026: crisis starting within 12 months 60% → 51%, against an average month of 44% → 29%). The score and its bands are unchanged.</li>
@@ -384,7 +412,7 @@ const ld = {
     </section>
 
     <section class="section" id="feeds-s">
-      <header class="sec-head"><div><p class="eyebrow"><span class="num">14</span>Data feeds</p><h2 class="section-title">Sources, live status</h2></div>
+      <header class="sec-head"><div><p class="eyebrow"><span class="num">15</span>Data feeds</p><h2 class="section-title">Sources, live status</h2></div>
         <p class="lede">Everything on this page comes from one public JSON file, rebuilt every 15 minutes: <a href="/live/collapse.json"><code>/live/collapse.json</code></a>. Each series stays under its publisher's terms; our scores are free to reuse under <a href={LICENSE} target="_blank" rel="noopener">CC BY 4.0</a>.</p></header>
       <pre class="terminal" id="terminal" data-nosnippet>$ connecting to willthesystemcollapse.com/live/collapse.json …</pre>
     </section>
@@ -602,7 +630,7 @@ const ld = {
     let t = 0;
     addEventListener('resize', () => {
       clearTimeout(t);
-      t = window.setTimeout(() => chartData && (drawHistory(), drawDebt(chartData), drawLeads(chartData)), 200);
+      t = window.setTimeout(() => chartData && (drawHistory(), drawDebt(chartData), drawLeads(chartData), drawHouseholds(chartData)), 200);
     });
     document.querySelectorAll<HTMLButtonElement>('.chip').forEach((b) =>
       b.addEventListener('click', () => {
@@ -879,6 +907,59 @@ const ld = {
       .join('') + '</tbody>';
   }
 
+  const HH: [string, string, (v: number) => string][] = [  // key, label, format
+    ['years_pay', 'Years of a typical worker’s pay to buy the median new home', (v) => v.toFixed(1)],
+    ['price_income', 'House price-to-income ratio (median new home ÷ median family income)', (v) => v.toFixed(1) + '×'],
+    ['mortgage_share', 'Mortgage payment, share of a typical worker’s pay', (v) => (100 * v).toFixed(0) + '%'],
+    ['price_rent', 'Price-to-rent ratio (house prices ÷ rents, first year = 100)', (v) => v.toFixed(0)],
+    ['misery', 'Misery index (unemployment + inflation)', (v) => v.toFixed(1)],
+    ['sentiment', 'Consumer sentiment (University of Michigan)', (v) => v.toFixed(1)],
+    ['saving', 'Personal saving rate', (v) => v.toFixed(1) + '%'],
+    ['debt_service', 'Household debt payments, share of income', (v) => v.toFixed(1) + '%'],
+    ['labour_share', 'Labour share of income (2017 = 100)', (v) => v.toFixed(1)],
+    ['pay_gap', 'Productivity-pay gap (output per hour ÷ typical pay, 1948 = 1)', (v) => v.toFixed(2) + '×'],
+    ['ceo_ratio', 'CEO-to-worker pay ratio', (v) => v.toFixed(0) + '×'],
+    ['gini', 'Gini index of family income (0 = equal)', (v) => v.toFixed(3)],
+    ['wealth_top1', 'Top 1%’s share of household wealth', (v) => v.toFixed(1) + '%'],
+    ['wealth_bottom50', 'Bottom half’s share of household wealth', (v) => v.toFixed(1) + '%'],
+  ];
+  function drawHouseholds(d: any) {
+    const h = d.households;
+    if (!h) return;  // a JSON from before the panel (mid-deploy)
+    // annual values are dated by year, quarterly ones by the quarter's first month
+    const when = (k: string, m: string) => m.length === 4 ? m : ['misery', 'sentiment', 'saving', 'strain'].includes(k) ? monthName(m) : `Q${Math.ceil(+m.slice(5, 7) / 3)} ${m.slice(0, 4)}`;
+    const th = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+    const s = h.strain, y = h.years_pay, c = h.ceo_ratio, g = h.pay_gap;
+    if (s) {
+      $('hh-strain').textContent = s.now.toFixed(0);
+      const top = Object.entries(s.themes).sort((a: any, b: any) => b[1] - a[1]).map(([t, v]) => `${t} ${v}`).join(', ');
+      $('hh-strain-note').textContent = `higher than in ${s.bad}% of months since ${s.since} · ${s.then.toFixed(0)} in ${s.then_year} · the worst, ${s.worst.toFixed(0)}, was ${monthName(s.worst_date)} · today by theme: ${top}`;
+    }
+    if (y) { $('hh-years').textContent = y.now.toFixed(1); $('hh-years-note').textContent = `${y.then.toFixed(1)} in ${y.then_year} · the worst, ${y.worst.toFixed(1)}, was ${when('years_pay', y.worst_date)} · now ${when('years_pay', y.date)}`; }
+    if (c) { $('hh-ceo').textContent = c.now.toFixed(0) + '×'; $('hh-ceo-note').textContent = `${c.then.toFixed(0)}× in ${c.then_year} · the peak, ${c.worst.toFixed(0)}×, was in ${c.worst_date} · realized pay, ${c.date}`; }
+    if (g && g.productivity != null) {
+      $('hh-gap').textContent = `+${(100 * g.productivity).toFixed(0)}% / +${(100 * g.pay).toFixed(0)}%`;
+      $('hh-gap-note').textContent = `output per hour vs a typical worker's pay, ${g.then_year} to ${when('pay_gap', g.date)} (Economic Policy Institute's productivity-pay gap) · labour's share of income is ${h.labour_share && h.labour_share.bad >= 99 ? 'at its lowest since ' + h.labour_share.since : th(h.labour_share?.bad ?? 0) + ' percentile of lowness'}`;
+    }
+    $('hh-table').innerHTML = `<thead><tr><th></th><th>1970</th><th>Now</th><th>Worst</th></tr></thead><tbody>` + HH.filter(([k]) => h[k]).map(([k, label, f]) => {
+      const x = h[k];
+      return `<tr><th>${esc(label)}</th><td>${f(x.then)}${x.then_year !== '1970' ? ` <span class="muted">${x.then_year}</span>` : ''}</td>` +
+        `<td class="${x.bad >= 85 ? 'down' : ''}" title="${esc(when(k, x.date))}">${f(x.now)}</td><td>${f(x.worst)} <span class="muted">${esc(when(k, x.worst_date))}</span></td></tr>`;
+    }).join('') + '</tbody>';
+    if (!s) return;
+    $('hh-since').textContent = s.since;
+    const svg = $('hh-chart');
+    const Wd = Math.max(280, svg.clientWidth), Ht = svg.clientHeight || 180, l = 26, r = 6, t = 8, b = 20;
+    svg.setAttribute('viewBox', `0 0 ${Wd} ${Ht}`);
+    const H = s.history, n = H.length;
+    const x = (i: number) => l + ((Wd - l - r) * i) / (n - 1), yv = (v: number) => t + (Ht - t - b) * (1 - v / 100);
+    let svgs = '';
+    for (let v = 0; v <= 100; v += 25) svgs += `<line x1="${l}" x2="${Wd - r}" y1="${yv(v)}" y2="${yv(v)}" class="grid"/><text x="${l - 4}" y="${yv(v) + 4}" class="axis" text-anchor="end">${v}</text>`;
+    H.forEach(([yr]: [string], i: number) => { if (+yr % 10 === 0) svgs += `<text x="${x(i)}" y="${Ht - 4}" class="axis" text-anchor="middle">${yr}</text>`; });
+    svgs += `<polyline points="${H.map(([, v]: [string, number], i: number) => `${x(i).toFixed(1)},${yv(v).toFixed(1)}`).join(' ')}" class="line"/>`;
+    svg.innerHTML = svgs;
+  }
+
   function drawInflation(d: any) {
     const c = Object.fromEntries(d.components.map((x: any) => [x.key, x]));
     $('stag-now').textContent = d.stagflation.toFixed(0);
@@ -941,6 +1022,7 @@ const ld = {
     drawInflation(d);
     drawOutlook(d);
     drawSociety(d);
+    drawHouseholds(d);
     drawVenues(d);
     drawDebt(d);
     drawTicker(d);
@@ -1090,6 +1172,11 @@ const ld = {
   @media (max-width: 1100px) { .outlook-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .society-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   @media (max-width: 1100px) { .society-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .society-grid > :last-child:nth-child(odd) { grid-column: span 2; } }
+  #hh-chart { width: 100%; height: 180px; display: block; margin-bottom: 6px; }
+  :global(#hh-chart .grid) { stroke: var(--rule); stroke-width: 1; }
+  :global(#hh-chart .axis) { fill: var(--muted); font: 11px var(--mono); }
+  :global(#hh-chart .line) { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
+  #households-s .grid-2 { margin-top: 0; }
   .ol { display: grid; gap: 6px; align-content: start; padding: 14px 16px !important; }
   .ol .ov { font: 600 1.9rem/1 var(--display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--gold); }
   .ol .ot { font-weight: 600; font-size: 0.84rem; line-height: 1.3; }

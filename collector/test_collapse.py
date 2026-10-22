@@ -58,4 +58,11 @@ assert collect.unrest_count(ev) == [('2020-12-01', 1), ('2021-01-01', 2), ('2021
 db.executemany('INSERT INTO obs VALUES (?,?,?)', [('NEWS_SENT', f'2026-0{i}-01', v) for i, v in enumerate((0.1, -0.5, 0.3, 0.2), 1)])
 n = score.society(db)['news']
 assert (n['max'], n['max_month'], n['pct']) == (-0.5, '2026-02', 62), n  # mid-rank: 2.5 of 4
+# households: a $100k home with 20% down at 6% costs $479.64 a month; years of pay compare 1970 with now and keep the worst
+assert abs(score.mortgage_payment(100000, 6.0) - 479.64) < 0.01, score.mortgage_payment(100000, 6.0)
+db = collect.connect(':memory:')
+db.executemany('INSERT INTO obs VALUES (?,?,?)', [('HOME_PRICE', '1970-01-01', 20800.0), ('WAGES', '1970-01-01', 2.5), ('HOME_PRICE', '2000-01-01', 166400.0),
+                                                  ('WAGES', '2000-01-01', 10.0), ('HOME_PRICE', '2026-04-01', 416000.0), ('WAGES', '2026-04-01', 40.0)])
+y = score.households(db)['years_pay']
+assert (y['then'], y['then_year'], y['now'], y['worst'], y['worst_date'], y['bad']) == (4.0, '1970', 5.0, 8.0, '2000-01', 50), y
 print('ok')

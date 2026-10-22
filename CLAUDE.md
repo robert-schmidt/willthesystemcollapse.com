@@ -26,10 +26,19 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   trade policy uncertainty, SF Fed news sentiment (stress, build-up calm, recession model: AUC 0.89 → 0.81–0.85), EU consumer
   confidence, EMV, categorical EPU (sovereign debt, monetary); the best, EMV + debt EPU, was +0.011 with CI incl. 0, best 2 of
   15. All shown in the society panel, outside the score.
+  Rejected after v7, round 3 (2026-10-22, baseline v7): household measures in every pillar and in the recession model (house
+  price ÷ pay or family income, mortgage payment ÷ pay, price ÷ rent, real house prices, household credit and debt service,
+  misery index, real wages, UMich sentiment, saving rate, labour share, productivity–pay gap, CEO pay, Gini, top 1% wealth)
+  and their strain composite (crisis ahead-24 0.57 alone). Best +0.021 (household credit 3y, debt service, as stress themes),
+  but random slow series added as a stress theme gain up to +0.019 and pass the CI check: a candidate must also beat that
+  placebo. Unrest study (IMF RSUI × OECD, 46 countries, 1991–2025): strain didn't come before flare-ups (AUC 0.42–0.53);
+  unrest came before weaker jobs and stocks only before 2008. All shown in the households panel, outside the score.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
   EPU (policyuncertainty.com) and GPR/TPU (matteoiacoviello.com) are CC BY 4.0; the IMF unrest index, Richmond Fed partisan
   conflict, SF Fed news sentiment and Eurostat need attribution: keep their credits in the society panel and the feed labels.
+  EPI (CEO pay, productivity–pay gap) allows citing with credit to its State of Working America Data Library; Freddie Mac
+  mortgage rates and UMich sentiment are "citation required" on FRED. WID income shares state no licence: not used.
 - **Server.** Shared HestiaCP VPS: touch only this site's `willthesystemcollapse` account (and the sister
   site's, see CLAUDE.local.md). Deploy with `git push && npm run deploy` (no GitHub Actions). Cron stdout must stay quiet
   (cron mails it).

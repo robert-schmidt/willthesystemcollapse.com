@@ -329,6 +329,39 @@ def eu_confidence(_):
     return sorted((f'{t[int(i)]}-01', v) for i, v in d['value'].items())
 
 
+def epi_ceo_ratio(_):
+    """CEO-to-typical-worker pay ratio, realized pay, annual (Economic Policy Institute, State of Working America Data Library;
+    "users may freely cite data obtained here"). Before 1992 EPI draws straight lines between its survey years: only the
+    years off those lines are kept, so the page never quotes a filled-in year."""
+    r = json.loads(get('https://data.epi.org/api/indicator/data/list?indicatorId=ceo_pay_ratio&dateInterval=year'
+                       '&measureId=ceo_worker_realized&geoLevel=national&dimensionId=overall'))
+    v = [(x['date'][:10], x['value']) for x in sorted(r, key=lambda x: x['date']) if x['value'] is not None]
+    return [p for i, p in enumerate(v) if i in (0, len(v) - 1) or abs(p[1] - (v[i - 1][1] + v[i + 1][1]) / 2) > 1e-4]
+
+
+@functools.lru_cache(maxsize=1)
+def epi_productivity_file():
+    return list(csv.DictReader(io.StringIO(get('https://github.com/Economic/productivity_pay_gap/releases/latest/download/'
+                                               'epi_productivity_pay_gap.csv').decode())))
+
+
+def epi_productivity(name):
+    """EPI's productivity-pay gap, quarterly since 1948 (1948 = 100): net productivity, or a typical worker's pay after inflation."""
+    return [(f"{r['year']}-{3 * int(r['quarter']) - 2:02d}-01", num(r['value'])) for r in epi_productivity_file()
+            if r['frequency'] == 'quarterly' and r['name'] == name and num(r['value']) is not None]
+
+
+def dfa_wealth(groups):
+    """Share of US household net worth, %, quarterly since 1989 (Federal Reserve Distributional Financial Accounts)."""
+    out = {}
+    for r in csv.DictReader(io.StringIO(get('https://www.federalreserve.gov/releases/z1/dataviz/download/dfa-networth-shares.csv').decode())):
+        if r['Category'] in groups:
+            y, q = r['Date'].split(':Q')
+            d = f'{y}-{3 * int(q) - 2:02d}-01'
+            out[d] = out.get(d, 0) + float(r['Net worth'])
+    return sorted(out.items())
+
+
 @functools.lru_cache(maxsize=None)
 def rsui(key):
     """IMF Reported Social Unrest Index (Barrett, Appendino, Nguyen and de Leon Miranda), from media reports, monthly:
@@ -533,6 +566,19 @@ SERIES = {
             'Caldara, Iacoviello, Molligo, Prestipino and Raffo, matteoiacoviello.com (CC BY)'),
     'NEWS_SENT': (news_sentiment, None, D, 'Tone of US economic news', 'Shapiro, Sudhof and Wilson, Federal Reserve Bank of San Francisco'),
     'EU_CONF': (eu_confidence, None, M, 'EU consumer confidence', 'European Commission via Eurostat'),
+    # households, 1970 against now: shown only (tested in October 2026, none made crisis warning better)
+    'FAM_INCOME': (fred, 'MEFAINUSA646N', W, 'Median family income (annual)', 'US Census Bureau via FRED'),
+    'MORTGAGE30': (fred, 'MORTGAGE30US', D, '30-year fixed mortgage rate (weekly)', 'Freddie Mac via FRED'),
+    'RENT_CPI': (fred, 'CUUR0000SEHA', M, 'Consumer prices: rent of primary residence', 'BLS via FRED'),
+    'LABOR_SHARE': (fred, 'PRS85006173', M, 'Labor share, nonfarm business (2017 = 100)', 'BLS via FRED'),
+    'SAVING': (fred, 'PSAVERT', M, 'Personal saving rate', 'BEA via FRED'),
+    'SENTIMENT': (fred, 'UMCSENT', M, 'Consumer sentiment', 'University of Michigan Surveys of Consumers via FRED'),
+    'GINI': (fred, 'GINIALLRF', W, 'Gini index of family income (annual)', 'US Census Bureau via FRED'),
+    'CEO_RATIO': (epi_ceo_ratio, None, W, 'CEO-to-typical-worker pay ratio (annual)', 'Economic Policy Institute, State of Working America Data Library'),
+    'PRODUCTIVITY': (epi_productivity, 'productivity_real_index_1948', W, 'Net productivity (1948 = 100)', 'Economic Policy Institute'),
+    'TYPICAL_PAY': (epi_productivity, 'comp_private_real_index_1948', W, 'Typical worker pay after inflation (1948 = 100)', 'Economic Policy Institute'),
+    'WEALTH_TOP1': (dfa_wealth, ('TopPt1', 'RemainingTop1'), W, 'Top 1% share of household wealth', 'Federal Reserve Distributional Financial Accounts'),
+    'WEALTH_BOTTOM50': (dfa_wealth, ('Bottom50',), W, 'Bottom 50% share of household wealth', 'Federal Reserve Distributional Financial Accounts'),
 }
 INCREMENTAL = {bcra, nbp_gold, shfe_gold}  # fetchers that take the last stored date and only fetch what's new
 

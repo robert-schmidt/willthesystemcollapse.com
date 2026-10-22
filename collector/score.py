@@ -714,6 +714,7 @@ def report(db, SERIES):
         pairs=gaps,
         outlook=long_run(db),
         society=society(db),
+        households=long_run(db, households),
         forecast=dict(probability=round(100 * F['now'], 1), percentile=round(100 * pscore['warning']),
                       inputs=[dict(key=k, label=names[k], value=round(v, 3), weight=round(F['weights'][k], 3))
                               for k, v in F['x'].items()],
@@ -750,6 +751,76 @@ def society(db):
                 unrest_countries={c: stat(f'UNREST_{c}') for c in ('USA', 'GBR', 'FRA', 'DEU', 'ITA', 'ESP', 'NLD', 'POL')},
                 partisan=stat('PCI'), trade=stat('TPU'), news=stat('NEWS_SENT', low=True), eu_conf=stat('EU_CONF', low=True),
                 migration={c: stat(f'MIGFEAR_{c}') for c in ('US', 'GB', 'DE')})
+
+
+def mortgage_payment(price, rate):
+    """Monthly payment on a home bought with 20% down and a 30-year fixed loan at this rate (% a year)."""
+    r = rate / 1200
+    return 0.8 * price * r / (1 - (1 + r) ** -360)
+
+
+def households(db):
+    """What a pay cheque buys and who gets what, 1970 (or the nearest year with data) against now, each with its worst
+    reading, and a household strain index that sums them up. Shown only: tested in October 2026, none of these made crisis
+    or recession warning better than random series did, and strain didn't come before unrest in 46 countries since 1991."""
+    M = lambda k: monthly(db, k)
+    price, wage, rate, hpi, rent, cpi, unr = (M('HOME_PRICE'), M('WAGES'), monthly(db, 'MORTGAGE30', 'mean'), M('HPI'),
+                                             M('RENT_CPI'), M('CPI'), M('UNRATE'))
+    year = lambda s: {m[:4]: v for m, v in s.items()}  # annual series are dated in January
+    fam = year(M('FAM_INCOME'))
+    p_year = {y: sum(v) / len(v) for y in {m[:4] for m in price} if len(v := [x for m, x in price.items() if m[:4] == y]) == 4}
+    ptr = {m: hpi[m] / rent[m] for m in hpi if m in rent}
+    prod, pay = M('PRODUCTIVITY'), M('TYPICAL_PAY')
+    S = {  # key: (series, which way is worse)
+        'years_pay': ({m: price[m] / (wage[m] * 2080) for m in price if m in wage}, max),  # full-time, 40 hours a week
+        'price_income': ({y: p_year[y] / fam[y] for y in p_year if y in fam}, max),
+        'mortgage_share': ({m: mortgage_payment(price[m], rate[m]) / (wage[m] * 2080 / 12) for m in price if m in wage and m in rate}, max),
+        'price_rent': ({m: 100 * v / ptr[min(ptr)] for m, v in ptr.items()} if ptr else {}, max),
+        'misery': ({m: unr[m] + 100 * (cpi[m] / cpi[shift(m, -12)] - 1) for m in unr if m in cpi and shift(m, -12) in cpi}, max),
+        'sentiment': (M('SENTIMENT'), min),
+        'saving': (M('SAVING'), min),
+        'debt_service': (M('DSR'), max),
+        'labour_share': (M('LABOR_SHARE'), min),
+        'pay_gap': ({m: prod[m] / pay[m] for m in prod if m in pay}, max),
+        'ceo_ratio': (year(M('CEO_RATIO')), max),
+        'gini': (year(M('GINI')), max),
+        'wealth_top1': (M('WEALTH_TOP1'), max),
+        'wealth_bottom50': (M('WEALTH_BOTTOM50'), min),
+    }
+    out, bad = {}, {}
+    today = date.today().strftime('%Y-%m')
+    for k, (s, worst) in S.items():
+        if not s:
+            continue
+        ms, srt = sorted(s), sorted(s.values())
+        y0 = max([m[:4] for m in ms if m[:4] <= '1970'] or [ms[0][:4]])
+        base = [s[m] for m in ms if m[:4] == y0]
+        w = worst(ms, key=s.get)
+        badness = lambda v: pct(srt, v) if worst is max else 1 - pct(srt, v)
+        extra = dict(productivity=prod[ms[-1]] / prod[f'{y0}-01'] - 1, pay=pay[ms[-1]] / pay[f'{y0}-01'] - 1) if k == 'pay_gap' else {}
+        out[k] = dict(now=round(s[ms[-1]], 4), date=ms[-1], then=round(sum(base) / len(base), 4), then_year=y0, worst=round(s[w], 4),
+                      worst_date=w, bad=round(100 * badness(s[ms[-1]])), since=ms[0][:4], **{x: round(v, 4) for x, v in extra.items()})
+        # monthly, for the index: annual values hold for the year after, quarterly ones for the quarter
+        bad[k] = {m: badness(v) for m, v in ffill({(m + '-01' if len(m) == 4 else m): v for m, v in s.items()}, span(min(ms)[:4] + '-01', today), 14).items()}
+    # household strain: how bad each reading is against its own history (1 = worst), averaged within themes, then across them
+    themes = dict(housing=['years_pay', 'mortgage_share', 'price_rent'], pocketbook=['misery'], mood=['sentiment'],
+                  cushion=['saving', 'debt_service'], fairness=['labour_share', 'pay_gap', 'ceo_ratio', 'gini', 'wealth_top1'])
+    idx = {}
+    for m in span('1960-01', today):
+        t = [sum(v) / len(v) for ks in themes.values() if (v := [bad[k][m] for k in ks if m in bad.get(k, {})])]
+        if len(t) == len(themes):
+            idx[m] = 100 * sum(t) / len(t)
+    if idx:
+        ms = sorted(idx)
+        y0 = max(ms[0][:4], '1970')
+        top = max(ms, key=idx.get)
+        out['strain'] = dict(now=round(idx[ms[-1]], 1), date=ms[-1], then=round(sum(idx[m] for m in ms if m[:4] == y0) / sum(m[:4] == y0 for m in ms), 1),
+                             then_year=y0, worst=round(idx[top], 1), worst_date=top, bad=round(100 * pct(sorted(idx.values()), idx[ms[-1]])),
+                             since=ms[0][:4], themes={t: round(100 * sum(v) / len(v)) for t, ks in themes.items()
+                                                      if (v := [bad[k][ms[-1]] for k in ks if ms[-1] in bad.get(k, {})])},
+                             history=[[y, round(sum(v) / len(v), 1)] for y in sorted({m[:4] for m in ms})
+                                      if (v := [idx[m] for m in ms if m[:4] == y])])
+    return out
 
 
 def external(db):
@@ -876,11 +947,12 @@ def markets(db):
 
 # ---- the long run: outside the score ----
 
-def long_run(db):
+def long_run(db, fn=None):
+    fn = fn or outlook
     try:
-        return outlook(db)
-    except Exception as e:  # its sources (Shiller's file above all) must never stop the monitor
-        print(f'! outlook: {e!r}', file=sys.stderr)
+        return fn(db)
+    except Exception as e:  # panels outside the score (Shiller's file, EPI, the Fed's DFA) must never stop the monitor
+        print(f'! {fn.__name__}: {e!r}', file=sys.stderr)
         return None
 
 
