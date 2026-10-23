@@ -29,6 +29,7 @@ const ld = {
       description: 'A 0–100 score of US and global financial-system stress, refreshed every 15 minutes from 230+ public series (Federal Reserve, FRED, US Treasury, OFR, ECB, IMF, World Bank, exchanges), with its pillars, red flags, a 12-month recession probability and a monthly backtest since 1973.',
       keywords: ['financial stress index', 'recession probability', 'yield curve', 'systemic risk', 'inflation', 'government debt', 'gold'],
       license: LICENSE, isAccessibleForFree: true, creator: { '@id': `${SITE}/#org` }, temporalCoverage: '1973-01/..', dateModified: NOW,
+      variableMeasured: ['System stress score (0–100)', 'Recession probability, next 12 months', 'Crisis odds after months like this one', 'Expected 10-year real stock return'],
       distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${SITE}/live/collapse.json` }],
     },
   ],

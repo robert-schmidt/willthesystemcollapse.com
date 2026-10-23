@@ -25,6 +25,9 @@ rsync -a --delete --exclude '.well-known' --exclude '/live/' dist/ "$WEB/"
 # put the latest reading into the fresh page now rather than at the next collector run
 python3 collector/collect.py --snapshot --out "$WEB/live"
 rm -rf node_modules
+# tell Bing/Yandex (IndexNow) the pages changed; the key is the public/<32 hex>.txt file. Never fails a deploy.
+KEY=$(ls public/*.txt | sed -n 's|.*/\([0-9a-f]\{32\}\)\.txt|\1|p')
+curl -fsS -m 10 -o /dev/null "https://api.indexnow.org/indexnow?url=https://willthesystemcollapse.com/&key=$KEY" || true
 
 # Keep the last 3 releases (each keeps its dist/ for a manual rollback: rsync -a --delete <release>/dist/ $WEB/).
 ls -1dt "$RELEASES"/*/ | tail -n +4 | xargs -r rm -rf
