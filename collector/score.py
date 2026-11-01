@@ -344,8 +344,8 @@ def components(db):
 
     # warning-pillar inputs (forecast.py): 10y−3m spread, constant-maturity daily data from 1982, bills before
     t10y3m = M('T10Y3M', 'mean')
-    spread = {m: t10y3m.get(m, gs10[m] - tb3[m] if m in tb3 else None) for m in gs10}
-    spread = {m: v for m, v in spread.items() if v is not None}
+    # every month either series covers: GS10's monthly average arrives days after the month ends, T10Y3M is daily
+    spread = {m: t10y3m[m] if m in t10y3m else gs10[m] - tb3[m] for m in sorted(set(gs10) | set(t10y3m)) if m in t10y3m or m in tb3}
     spread[today] = latest(db, 'T10Y3M')[1]  # today's curve, not the month-to-date average
     W = dict(spread=spread, nfci=M('NFCI', 'mean'), ebp=M('EBP'), usrec=M('USREC'))
     W['nfci'][today] = latest(db, 'NFCI')[1]
@@ -685,7 +685,7 @@ def report(db, SERIES):
     # warning pillar: recession probability from the curve, financial conditions and credit
     sp, nf = W['spread'], W['nfci']
     now = max(sp)
-    live_x = [sp[now], min(sp[shift(now, -k)] for k in range(18)), nf[now], nf[now] - nf[shift(now, -6)], latest(db, 'EBP')[1]]
+    live_x = [sp[now], min(sp[x] for k in range(18) if (x := shift(now, -k)) in sp), nf[now], nf[now] - nf[shift(now, -6)], latest(db, 'EBP')[1]]
     F = forecast.run(sp, nf, W['ebp'], W['usrec'], months, live_x)
     warn_hist = warning_pillar(W, F, months)
 
