@@ -10,11 +10,11 @@ import { ARCHIVE, LICENSE, REPO } from '../site';
 // fields, so the first paint and crawlers see the reading before the script runs.
 const SITE = Astro.site!.href.replace(/\/$/, '');
 const ODDS = [
-  ['crisis_12m', 'Crisis starting within 12 months', 'any of the 13 episodes since 1973, 6 of them without a recession'],
-  ['crisis_24m', 'Crisis starting within 24 months', 'any episode, from SVB-size to 2008-size'],
-  ['severe_24m', 'Severe crisis starting within 24 months', '1973–75, 1979–82, 2008 or 2020 scale'],
-  ['recession_24m', 'US recession starting within 24 months', 'NBER dates'],
-  ['bear_24m', 'US stocks falling 20%+ within 24 months', 'OECD share-price index'],
+  ['crisis_12m', 'Crisis starting within 12 months, none under way now', 'any of the 13 episodes since 1973, 6 of them without a recession'],
+  ['crisis_24m', 'Crisis starting within 24 months, none under way now', 'any episode, from SVB-size to 2008-size'],
+  ['severe_24m', 'Severe crisis starting within 24 months, none under way now', '1973–75, 1979–82, 2008 or 2020 scale'],
+  ['recession_24m', 'US recession starting within 24 months, none under way now', 'NBER dates'],
+  ['bear_24m', 'US stocks falling 20%+ within 24 months, no fall under way', 'monthly averages, OECD index'],
 ];
 const NOW = new Date().toISOString().slice(0, 19) + 'Z';
 const DESCRIPTION = 'A live 0–100 financial stress index, backtested since 1973: crisis odds, recession probability, inflation, debt and gold from 230+ public data feeds, every 15 minutes.';
@@ -55,10 +55,10 @@ const ld = {
       <div class="hero-main">
         <p class="eyebrow"><span class="live-dot"></span> Live monitor · <time id="updated">connecting…</time></p>
         <h1>Will the system collapse?</h1>
-        <p class="answer-k">Right now</p>
+        <p class="answer-k">Breaking now?</p>
         <p class="answer" id="answer" data-band="checking" style="--len:9">CHECKING…</p>
         <p class="lede simple-only">A 0–100 gauge of stress in the financial system, built from 230+ public data feeds and backtested on every crisis since 1973.</p>
-        <p class="lede" id="summary">Reading over 140 public data feeds from central banks, the US Treasury and markets.</p>
+        <p class="lede" id="summary">Reading 230+ public data feeds from central banks, the US Treasury and markets.</p>
         <div class="flag-strip" id="flag-strip"></div>
         <div class="unusual"><p class="eyebrow">Unusual right now</p><ul id="unusual-list"><li class="none">Checking…</li></ul></div>
       </div>
@@ -85,7 +85,7 @@ const ld = {
     <section class="odds" aria-labelledby="odds-title">
       <div class="odds-head">
         <h2 id="odds-title">Will it? What followed months like this one</h2>
-        <p class="muted small" id="odds-note">Every month since 1973 that wasn't already in the event, weighted by how close its score was to today's, and what happened next, against the average month.</p>
+        <p class="muted small" id="odds-note">Every month since 1973 not already in the event, weighted by how close its score was to today's, and what happened next, against the average month. History, not a forecast.</p>
       </div>
       <div class="odds-grid tiles" id="odds-grid">
         {ODDS.map(([k, title, note]) => <div class="card odd avg-risk" data-k={k}><p class="ov">--</p><p class="ot">{title}</p><p class="ob"><span>average month --</span><i></i></p><p class="muted tiny">{note}</p></div>)}
@@ -149,7 +149,7 @@ const ld = {
           <div class="card-head"><h3>The big picture</h3><span class="meta">the balance of power · how reserve powers have declined</span></div>
           <table class="mini" id="su-power"></table>
           <p class="muted small"><b>How reserve powers have declined.</b> Ray Dalio (<i>Principles for Dealing with the Changing World Order</i>, 2021; <i>How Countries Go Broke</i>, 2025) finds the same order each time: debts outgrow incomes, the central bank prints to carry them, the gap between rich and poor turns into internal conflict, a rival rises, and the currency's reserve role goes last. Paul Kennedy (<i>The Rise and Fall of the Great Powers</i>, 1987) measured power by the productive base: military commitments that outrun it bring "slower growth, heavier taxes, deepening domestic splits". Niall Ferguson's shorthand: a great power that pays more in interest than it spends on defence is losing that status. Peter Turchin (<i>End Times</i>, 2023) puts the social engine first, a "wealth pump" from workers to elites and too many would-be elites for too few seats. Joseph Tainter (1988): complex societies break when each new layer of complexity buys less than it costs.</p>
-          <p class="muted small"><b>Where the US stands on those tests. Against it:</b> China out-produces it in manufacturing, about twice its share, and in output at purchasing power. Interest now costs more than defence. The debt holds steady only through inflation. Foreign central banks have held fewer Treasuries since 2020 (Japan's sales this year paid for record interventions to support the yen; China's holdings are the lowest since 2008) and bought about 1,000 tonnes of gold a year in 2022–24, much of it never reported (World Gold Council). The dollar's share of world reserves is the lowest in the IMF's records since 1999. This year brought the war with Iran, the Fed's first rate rise since 2023 and a 10-year Treasury auction at 5.30%, the highest since 2000: the squeeze Dalio describes. His own index still ranks the US first (0.89 to China's 0.80, 2024), but on the strengths that go last (finance, the reserve currency, the military), with China ahead on trade, competitiveness and infrastructure. He puts the odds of a major restructuring or monetisation of reserve-currency debt at about 65% within five years and 80% within ten unless deficits come down to 3% of GDP; they are about 6%. <b>For it:</b> at market prices the US still produces a quarter of the world's output, as in 1980. The dollar is on one side of 89% of currency trades (BIS, 2025), and the reserve share it lost went to the euro and smaller currencies, not the yuan (2%, and falling). It is the largest oil producer, its population still grows while China's shrinks, and its private AI investment is about 23 times China's (Stanford AI Index 2026), though the best models are close.</p>
+          <p class="muted small"><b>Where the US stands on those tests. Against it:</b> China out-produces it in manufacturing, about twice its share, and in output at purchasing power. Interest now costs more than defence. The debt holds steady only while growth outruns the old cheap debt. Foreign central banks have held fewer Treasuries since 2020 (Japan's sales this year paid for record interventions to support the yen; China's holdings are the lowest since 2008) and bought about 1,000 tonnes of gold a year in 2022–24, much of it never reported (World Gold Council). The dollar's share of world reserves is near the lowest in the IMF's records since 1999. This year brought the war with Iran, the Fed's first rate rise since 2023 and a 10-year Treasury auction at 5.30%, the highest since 2000: the squeeze Dalio describes. His own index still ranks the US first (0.89 to China's 0.80, 2024), but on the strengths that go last (finance, the reserve currency, the military), with China ahead on trade, competitiveness and infrastructure. He puts the odds of a major restructuring or monetisation of reserve-currency debt at about 65% within five years and 80% within ten unless deficits come down to 3% of GDP; they are about 6%. <b>For it:</b> at market prices the US still produces a quarter of the world's output, as in 1980. The dollar is on one side of 89% of currency trades (BIS, 2025), and the reserve share it lost went to the euro and smaller currencies, not the yuan (2%, and falling). It is the largest oil producer, its population still grows while China's shrinks, and its private AI investment is about 23 times China's (Stanford AI Index 2026), though the best models are close.</p>
           <p class="muted small"><b>How long the handovers took.</b> The Bank of Amsterdam's guilder lost its reserve role in 1781–92, after loose lending and a war with Britain. The US economy passed Britain's before 1914, yet the dollar first overtook sterling in reserves in the mid-1920s, lost the lead again in the 1930s, and took it for good only after the Second World War and sterling's 1949 devaluation; sterling still held a fifth of world reserves in the 1960s. Forecasts have missed both ways: Kennedy's decline of 1987 was followed by the boom of the 1990s, and the euro was expected to overtake the dollar by 2022. The shape history suggests is not a single collapse but decades of erosion, usually ended by war debts and a forced devaluation. Whether an AI lead changes that depends on its use: as growth, it is the one thing that makes the arithmetic above work; as weapons, it adds to the overstretch Kennedy described.</p>
           <p class="muted tiny">Sources: Dalio, <i>How Countries Go Broke</i> (2025) and Great Powers Index 2024 (economicprinciples.org); Kennedy (1987); Turchin (2023); Tainter (1988); Ferguson (Hoover Institution); Eichengreen and Flandreau (NBER w14154); Quinn and Roberds (IJCB, 2016); Japan's Ministry of Finance; World Gold Council; BIS Triennial Survey 2025; Stanford AI Index 2026. Tables: US Treasury (TIC), IMF (COFER, International Liquidity, World Economic Outlook), SIPRI and the UN via the World Bank.</p>
         </div>
@@ -193,7 +193,7 @@ const ld = {
             <button class="chip" data-series="buildup">Build-up</button>
           </div>
           <p class="legend small muted">
-            <span><span class="key crisis"></span> crisis episodes</span><span><span class="key rec"></span> US recessions (NBER)</span><span><span class="key bear"></span> start of a 20% stock-market fall</span>
+            <span><span class="key crisis"></span> crisis episodes</span><span><span class="key rec"></span> US recessions (NBER)</span><span><span class="key bear"></span> a 20% stock-market fall reached (monthly averages)</span>
           </p>
         </div>
         <div class="chart">
@@ -243,7 +243,7 @@ const ld = {
           <table class="mini" id="unrest-table"></table>
           <p class="small muted">Each country's share of news about protests, riots and strikes (IMF Reported Social Unrest Index). The IMF publishes it a few months late, so the latest unrest is not here yet.</p>
         </div>
-        <div class="card prose-card"><h3>In the score?</h3><p class="muted small"><b>Policy uncertainty: yes</b>, a double-weight theme of the stress pillar, about a tenth of the score. It rises as trouble arrives rather than before (since 1973 it averaged the 85th percentile in the month a crisis began, against about the 70th in the two years before), so it says something is happening, not that something is coming. <b>Geopolitical risk: yes, the other way round.</b> Since 1900, calm years came before crises and recessions far more often than tense ones (the late 1990s, 2018–19, 2021), a pattern found in 1905–72 and confirmed after 1973, so a calm past year adds to build-up and today's tension pulls it down. <b>The tone of the news, Europe's mood and unrest coverage: yes, since v8</b>, as one theme of the stress pillar. Under the fairer test adopted in October 2026 each still picked out months of crisis among months the markets already rated alike; unrest counts against each of 19 advanced economies' own past five years. The count of countries with major unrest below is not in the score: its one pass rested on two coincidences (see How the formula evolved). <b>Polarisation, migration fear and trade: no</b>, none carried information the score didn't already have. Anger and polarisation mostly follow financial crises: far-right vote share has risen by about a third in the five years after one (Funke, Schularick and Trebesch, 2016). Sources: Baker, Bloom and Davis, policyuncertainty.com (policy uncertainty, migration fear); Caldara and Iacoviello, Federal Reserve Board (CC BY 4.0); Caldara, Iacoviello, Molligo, Prestipino and Raffo (trade, CC BY); Azzimonti, Federal Reserve Bank of Richmond (partisan conflict); Shapiro, Sudhof and Wilson, Federal Reserve Bank of San Francisco (news sentiment); European Commission via Eurostat (consumer confidence); IMF Reported Social Unrest Index (Barrett, Appendino, Nguyen and de Leon Miranda).</p></div>
+        <div class="card prose-card"><h3>In the score?</h3><p class="muted small"><b>Policy uncertainty: yes</b>, a double-weight theme of the stress pillar, about 7% of the score. It rises as trouble arrives rather than before (since 1973 it averaged the 85th percentile in the month a crisis began, against about the 70th in the two years before), so it says something is happening, not that something is coming. <b>Geopolitical risk: yes, the other way round.</b> Since 1900, calm years came before crises and recessions far more often than tense ones (the late 1990s, 2018–19, 2021), a pattern found in 1905–72 and confirmed after 1973, so a calm past year adds to build-up and today's tension pulls it down. <b>The tone of the news, Europe's mood and unrest coverage: yes, since v8</b>, as one theme of the stress pillar. Under the fairer test adopted in October 2026 each still picked out months of crisis among months the markets already rated alike; unrest counts against each of 19 advanced economies' own past five years. The count of countries with major unrest below is not in the score: its one pass rested on two coincidences (see How the formula evolved). <b>Polarisation, migration fear and trade: no</b>, none carried information the score didn't already have. Anger and polarisation mostly follow financial crises: far-right vote share has risen by about a third in the five years after one (Funke, Schularick and Trebesch, 2016). Sources: Baker, Bloom and Davis, policyuncertainty.com (policy uncertainty, migration fear); Caldara and Iacoviello, Federal Reserve Board (CC BY 4.0); Caldara, Iacoviello, Molligo, Prestipino and Raffo (trade, CC BY); Azzimonti, Federal Reserve Bank of Richmond (partisan conflict); Shapiro, Sudhof and Wilson, Federal Reserve Bank of San Francisco (news sentiment); European Commission via Eurostat (consumer confidence); IMF Reported Social Unrest Index (Barrett, Appendino, Nguyen and de Leon Miranda).</p></div>
       </div>
     </section>
 
@@ -293,7 +293,7 @@ const ld = {
             <li><strong>Financial conditions.</strong> The Chicago Fed's NFCI combines 105 measures of money-market, debt and equity conditions and of bank lending. Tight and tightening conditions starve the economy of credit.</li>
             <li><strong>Excess bond premium.</strong> The part of corporate bond spreads not explained by default risk: when it rises, lenders are losing their nerve.</li>
           </ul>
-          <p class="muted small">Logistic regression with a ridge penalty, trained on monthly data since 1971 to answer "does a recession start within 12 months?". Refitted each January using only outcomes already known; backtested out of sample from 1979.</p>
+          <p class="muted small">Logistic regression with a ridge penalty, trained on monthly data since 1973 to answer "does a recession start within 12 months?". Refitted each January using only outcomes already known; backtested out of sample from 1979. Today's number uses a fit on every month whose outcome is known and today's readings; the chart uses the January refits and monthly averages, so the two can differ by a point.</p>
           <p class="muted small">Why it can read lower than economists’ surveys or betting markets: it counts only what has come before past recessions, and a deep inversion alone isn’t enough while financial conditions and credit spreads stay calm. The <a href="https://www.newyorkfed.org/research/capital_markets/ycfaq" target="_blank" rel="noopener">New York Fed’s model</a> uses the yield curve alone, so the two can differ.</p>
         </div>
         <div class="card"><div class="card-head"><h3>Today's inputs</h3><span class="meta">model weights</span></div><table class="mini" id="fc-inputs"></table></div>
@@ -303,7 +303,7 @@ const ld = {
 
     <section class="section" id="lead-s">
       <header class="sec-head"><div><p class="eyebrow"><span class="num">11</span>Learning from past crises</p><h2 class="section-title">What moves before a crisis</h2></div>
-        <p class="lede">Every crisis and 20% stock-market fall since 1973, lined up on the month it started. Market gauges stay ordinary until the month trouble hits; the signals that move earlier are in the economy and the credit cycle. None of them can see an overnight crash coming.</p></header>
+        <p class="lede">The crises since 1973, lined up on the month each started (every 20% stock-market fall since then began inside one of them). Market gauges stay ordinary until the month trouble hits; building permits and the recession model move a year to six months earlier, while bank lending standards and jobless claims react only once it has begun. None of them can see an overnight crash coming.</p></header>
       <div class="grid-2">
         <div class="card">
           <div class="card-head"><h3>Average percentile around the start of <span id="lead-n"></span> episodes</h3><span class="meta">50 = an ordinary month</span></div>
@@ -397,7 +397,7 @@ const ld = {
       <div class="steps tiles">
         <div class="card step">
           <span class="step-n">1</span><h3>Collect</h3>
-          <p class="muted"><span id="n-series">143</span> public series from the Federal Reserve, FRED, the US Treasury, the OFR, the ECB, the IMF, the World Bank, two central banks and exchange tickers. Every 15 minutes a script refreshes what is due: prices each run, daily data twice a day, monthly data daily, IMF and World Bank data weekly. A due series is re-read in full, some back to 1854, because publishers revise the past.</p>
+          <p class="muted"><span id="n-series">230+</span> public series from the Federal Reserve, FRED, the US Treasury, the OFR, the ECB, the IMF, the World Bank, two central banks and exchange tickers. Every 15 minutes a script refreshes what is due: prices each run, daily data twice a day, monthly data daily, IMF and World Bank data weekly. A due series is re-read in full, some back to 1854, because publishers revise the past.</p>
         </div>
         <div class="card step">
           <span class="step-n">2</span><h3>Compare with history</h3>
@@ -433,10 +433,11 @@ const ld = {
           <li><strong>v3 · Inflation, the Fed and debt.</strong> Added official and alternative inflation, inflation expectations, money growth, the dollar, the deficit, r − g, foreign debt, G7 debt and bond sell-offs, plus unemployment. Tested and rejected for the forecast: the Fed funds rate, its pace of hikes, the real policy rate and the 10-year minus 2-year curve, which added nothing the 10-year minus 3-month curve didn't already know (it is, in effect, the market's read of Fed policy). Debt measures don't time crises at all, so they shape structural risk rather than the warning.</li>
           <li><strong>v4 · Valuations, leverage and a consistency fix.</strong> Added the value of US company shares against GDP (a record 255% at the time, including privately held firms; about 210% for listed companies alone) and corporate debt against GDP, one of the better predictors of 20% stock falls (AUC 0.77 a year ahead). Switched r − g to the rate new borrowing costs, and debt growth to after-inflation terms, so the high-inflation 1970s no longer flatter today. Fixed the history to use the same latest-known inputs as the live reading (it had been dropping slow quarterly series in recent months) and a gap left by the October 2025 shutdown, when no CPI or unemployment data was published. Every target backtests as well or better.</li>
           <li><strong>v5 · Fairer averaging and calibrated labels.</strong> Inputs that measure the same thing are now averaged together first (eight consumer-inflation measures had been outvoting producer prices, expectations and the dollar; four stress indices outvoted the rest), which improved crisis warning a year ahead from 0.73 to 0.75. Bands are now set where the historical odds actually change, and the page shows those odds: the old "calm" label covered months whose odds were average. Tested and rejected: weights fitted by a model (worse out of sample: a dozen crises are too few to fit weights on) and an oil-shock signal (no added power; oil was then just below its three-year high).</li>
-          <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which keeps it to 1974, 1980 and 2008–09. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
+          <li><strong>v6 · Credit build-up, funding stress, honest timing.</strong> A fifth pillar, build-up, asks whether excesses are building: how fast private debt has outgrown the economy over three years (BIS data) and how cheap credit was two years earlier, the two signals research finds before banking crises (Greenwood, Hanson, Shleifer and Sørensen, 2022; López-Salido, Stein and Zakrajšek, 2017). The stress pillar gained funding dislocations: what banks pay to borrow for three months over T-bills, and the VIX above its three-month version. Quarterly data now enters the history only once it was published, not at the quarter it describes. The test for accepting the change was fixed before running it, and it passed: crisis warning two years ahead rose from 0.77 to 0.86, recession and severe-crisis warning improved too, in both 1973–99 and since 2000, and months scoring 60 or more in the 2022–24 false alarm fell from 24 to 5. "Systemic breakdown" now starts at 75, which kept it to the 1973–74, 1979–80 and 2008 episodes. It lowered the reading of October 2026 from 48 to 46: private credit has shrunk against GDP for three years, unlike before 2008. Tested and rejected: more weight on stock valuations (company shares against GDP, the CAPE ratio and households' share in stocks were in their top tenth in 79% of months since 1995; they predict ten-year returns, not crises), a credit-and-asset-boom trigger, counts of sudden moves, credit growth in the recession model, and famous investors' warnings, which can't be backtested.</li>
           <li><strong>v7 · Policy uncertainty and geopolitics.</strong> Two newspaper-based measures joined at the owner's request, under a no-harm rule set before testing: the score could not get worse at warning of crises, recessions or severe crises, and neither 1973–99 nor 2000+ could lose ground. Policy uncertainty in the US and Europe (Baker, Bloom and Davis) is a stress theme at double weight: it rises as trouble arrives and flags crises under way about as well as unemployment does, and double was the most weight history allowed before crisis warning two years ahead fell below v6 (triple lost ground). Geopolitical risk (Caldara and Iacoviello, since 1900) went in the other way round: calm years came before crises and recessions far more often than tense ones, a pattern found in 1905–72 and confirmed after 1973, so a calm past year now adds to build-up. Together they improved crisis warning two years ahead slightly (AUC 0.863 → 0.870).</li>
           <li><strong>Correction after v7 · smoother odds cards.</strong> The cards counted only months within 3 points of today's score, so a one-point move could swing them by 10 points or more. Every month now counts, weighted by how close its score was (half weight 6 points away). Tested walk-forward since 1990 against windows of ±3, ±5 and ±8 points, other weightings and a fitted curve: it predicted what followed better than the ±3 window on all five cards (Brier score 3–8% lower), and the odds move a quarter to a half less per point. At a score of 51: a crisis within two years 64% → 57%, a severe one 25% → 19%. The score is unchanged.</li>
           <li><strong>v8 · A fairer test, and ten inputs it let in.</strong> The owner asked whether the acceptance rule stopped the score from ever improving. Tested on itself, it did: it let in none of 300 random series, but also none of 20 synthetic inputs built to carry strong new information about crises, because a new input is about a twenty-fourth of the score and a whole-score test only sees how much it waters down the rest. The new rule asks about the input's own information: among months the score already rates alike, does it still pick out the months during or before a crisis, better than 99% of random series can, in both 1973–99 and 2000+, without making any target worse by more than 0.02? Calibrated on random and synthetic series only, before any real input was re-tested, it lets in 1–2.5% of random series and 13–19 of 20 strong signals. Re-run once on 61 inputs rejected since v6, ten passed, against about one expected by chance: loan delinquencies (all loans, mortgages), the tone of economic news, European consumer confidence and unrest in the news across 19 advanced economies, as stress; household credit growth with a year of low saving, and calm in the news, as build-up; household credit and debt payments, as fiscal (Mian, Sufi and Verner; Drehmann and Juselius). Grouped into five themes, v8 beat v7 on five of six targets (a crisis under way 0.835 → 0.851, a severe crisis within a year 0.829 → 0.848, a recession 0.893 → 0.904; 20% stock falls 0.723 → 0.716) in both periods, and the bands sharpened (40–50: 21% → 14% of months near a crisis; 60–70: 73% → 81%). The gain is small and, with 13 crises, its confidence range still includes zero. Run the other way, the test also showed that most money and fiscal inputs add nothing to crisis timing: they measure whether this can last, which is now answered separately in "How long can this go on?". It lowered the reading of October 2026 by about a point: most of the new inputs are calm today.</li>
+          <li><strong>Correction after v8 · one meaning per number.</strong> An audit of every computation (November 2026) found no error in the formula but several places where two numbers answered different questions under one name. "Crisis within two years" is now one question on the odds cards and in the summary: a crisis <em>starting</em> within 24 months, among months with none under way, against its own average; the bands keep their own question (a crisis under way or starting), say so on each card, and show today's 5-point bin, because the odds change steeply inside 40–50 (6% of months at 40–45 were in or near a crisis within two years, 42% at 45–50). The two-year card now says which crises carry today's estimate and how wide it is when the years are resampled. Every statistic on the page uses the same cut-off (months whose outcome is known), which trimmed the average month from 45% to 44%. Fixes to how inputs are read, none of which changed the score by more than 0.2 points in any month: five-year GDP growth and the three-year credit changes are taken on the quarterly grid (the live reading had compared a quarter that was carried forward with one that had moved on), shares, corporate debt and foreign debt are each divided by their own quarter's GDP, the funding dislocations use the worst day of the past month rather than of a month just begun, and the pre-1982 bill yield in the recession model is put on the bond-equivalent basis the daily series uses (1979–81 inversions read about 0.8 points deeper; the model's out-of-sample record is unchanged at 0.90). A month already 20% below its stock-market peak no longer counts as one with no fall ahead, which gives the 20%-fall row a "during" score and raises its "ahead" score from 0.72 to 0.75. The event study counts each episode once (the 13 crises; its 20 had included five 20% falls that began inside them and two from before 1973): building permits and the recession model still move earlier, bank lending standards and jobless claims turn out to react only once a crisis has begun. Labels now say which interest bill (national accounts, latest quarter, 21%; or net, fiscal year, 19%) and which debt (held by the public, 97%; gross, 123%) they mean, and the hero's verdict on sustainability names its condition: the debt holds steady only while growth stays near 6% and the old cheap debt lasts; at today's 10-year yield the same deficit would add about 1.5% of GDP a year. The score is unchanged.</li>
           <li><strong>Research after v7 · households, inequality and unrest.</strong> Tested against the acceptance rule, with the live v7 score as the baseline: house prices against pay and family income, the mortgage payment on a median home against pay, house prices against rents, real house-price growth, household credit and debt service, the misery index, real wages, consumer sentiment, the saving rate, labour's share of income, the productivity-pay gap, CEO-to-worker pay, the Gini index and the top 1%'s share of wealth, each in every pillar, as levels and as changes, and inside the recession model. None passed. The best, household credit growth and debt service as stress themes, added 0.021 to crisis warning two years ahead, but random slow-moving series added that way gain up to 0.019, so a test of the whole score can't tell them from noise. A fairer test, built the same week, looks at the information itself (among months the score rates alike, does the input still pick out the months before a crisis?) and finds that household credit growth and debt service do carry some. A household strain index built from these did no better (crisis warning 0.57 on its own, against the score's 0.87). A study of 46 countries since 1991 then asked whether strain leads to unrest and unrest to economic damage: unemployment, inflation, the misery index, food prices and consumer confidence came before the IMF's unrest flare-ups no more often than chance, before 2008 or after; unrest was followed by weaker jobs and stocks before 2008 (mostly unrest during crises already under way) and by nothing measurable since. The measures are shown in the households panel, outside the score.</li>
           <li><strong>Research after v7 · polarisation, migration, trade, news tone, Europe's mood.</strong> Tested against the acceptance rule with the live v7 score as the baseline: partisan conflict (Azzimonti), migration fear (US, UK, Germany), trade policy uncertainty, the tone of economic news (San Francisco Fed), EU consumer confidence, stock-market volatility in the news, and policy uncertainty about sovereign debt and about monetary policy, each as a stress theme; calm forms of news tone, confidence, volatility news and partisan conflict in build-up; and news tone inside the recession model. The best, volatility news and debt uncertainty together, added 0.011 to crisis warning two years ahead, against the 0.03 the rule asks for, with a confidence range that includes zero, and it was the best two of fifteen tries. News tone flags crises under way better than any other newspaper measure (AUC about 0.9), but the stress pillar already knows from markets, and inside the recession model it made out-of-sample accuracy worse (0.89 to 0.81–0.85). All are shown in the society panel, outside the score.</li>
           <li><strong>Research for v7 · society and politics.</strong> Tested and rejected: policy uncertainty and geopolitical risk inside the recession model (out-of-sample accuracy the same or worse, with unstable signs), geopolitical risk as a measure of stress now (it flags crises under way barely better than chance), global policy uncertainty and the IMF's World Uncertainty Index (no meaningful gain anywhere), and social unrest (IMF). Unrest's one pass, the number of countries with major unrest rising over a year, came entirely from the 2019 protest wave before Covid and the Arab Spring before the 2011 euro crisis, and the IMF dates its events partly with hindsight; it is shown above, outside the score. Election results (ParlGov) stop in June 2023, too stale for a live monitor.</li>
@@ -471,7 +472,7 @@ const ld = {
     stress: ['Stress now', 'Is a crisis happening? Financial-stress indices, the VIX, credit spreads, the stock drawdown, unemployment, funding dislocations (banks paying up to borrow, near-term fear above longer-term), loans going unpaid, policy uncertainty in the news, US and Europe, at double weight, and the mood: the tone of economic news, European consumer confidence and unrest in the news across 19 advanced economies.', 'Is something breaking right now? Market fear, credit spreads, bank funding, bad loans, policy uncertainty, the mood.'],
     warning: ['Early warning', 'Is a recession coming within a year? The yield-curve and financial-conditions model, as a percentile of its own history.', 'Is a recession coming?'],
     money: ['Inflation & money', 'Is money losing value? Official and alternative inflation, expectations, money growth, the dollar and gold.', 'Is money losing value? Inflation, money growth, the dollar, gold.'],
-    fiscal: ['Debt & fragility', 'How much could break? Government, corporate and household debt, households’ debt payments, deficits, the interest bill, r − g, foreign debt, stock valuations and bond sell-offs.', 'How much could break? Government, company and household debt, deficits, stock prices.'],
+    fiscal: ['Debt & fragility', 'How much could break? Government (US and G7), corporate and household debt, households’ debt payments, deficits, debt growth after inflation, the interest bill, r − g, foreign debt, stock valuations, bond sell-offs and the gold price after inflation.', 'How much could break? Government, company and household debt, deficits, stock prices.'],
     buildup: ['Build-up', 'Are excesses building? How fast private debt has outgrown the economy over three years, how cheap credit was two years ago (the two signals that come before banking crises), how fast households have borrowed while saving little, and how calm geopolitics and the economic news have been over the past year: calm years have come before crises more often than tense ones.', 'Are excesses building? Private and household debt growth, cheap credit, complacency.'],
   };
   const PILLARS = ['stress', 'warning', 'money', 'fiscal', 'buildup'];
@@ -498,12 +499,19 @@ const ld = {
     $('gauge-bands').innerHTML = bands
       .map((b: any, i: number) => `<path d="${arc(b.at, bands[i + 1]?.at ?? 100, 130)}" stroke="${BAND_COLORS[b.key]}" class="gband"/>`)
       .join('');
-    const marks = d.backtest.crises.filter((c: any) => ['2008', '1973', '2020'].includes(c.start.slice(0, 4)));
+    // three reference peaks, by the episode's start month; peaks within 2 points share one label (1973–74 and 2008 both peak at 78)
+    const SHOW: Record<string, string> = { '1973-11': '1974', '2007-08': '2008', '2020-02': '2020' };
+    const marks: { peak: number; label: string }[] = [];
+    d.backtest.crises.filter((c: any) => c.start in SHOW).sort((a: any, b: any) => a.peak - b.peak).forEach((c: any) => {
+      const m = marks[marks.length - 1];
+      if (m && c.peak - m.peak <= 2) m.label += ` · ${SHOW[c.start]}`;
+      else marks.push({ peak: c.peak, label: SHOW[c.start] });
+    });
     $('gauge-marks').innerHTML = marks
-      .map((c: any) => {
+      .map((c) => {
         const t = Math.PI * (1 - c.peak / 100);
         const x = 160 + 150 * Math.cos(t), y = 160 - 150 * Math.sin(t);
-        return `<line x1="${160 + 118 * Math.cos(t)}" y1="${160 - 118 * Math.sin(t)}" x2="${160 + 142 * Math.cos(t)}" y2="${160 - 142 * Math.sin(t)}" class="mark"/><text x="${x}" y="${y}" class="mark-t" text-anchor="middle">${c.start.slice(0, 4)}</text>`;
+        return `<line x1="${160 + 118 * Math.cos(t)}" y1="${160 - 118 * Math.sin(t)}" x2="${160 + 142 * Math.cos(t)}" y2="${160 - 142 * Math.sin(t)}" class="mark"/><text x="${x}" y="${y}" class="mark-t" text-anchor="middle">${c.label}</text>`;
       })
       .join('');
     ($('needle') as unknown as SVGGElement).style.transform = `rotate(${-90 + (180 * d.score) / 100}deg)`;
@@ -554,7 +562,6 @@ const ld = {
   // ---------- bands ----------
   function drawBands(d: any) {
     const bt = d.backtest;
-    const th = Object.fromEntries(bt.thresholds.map((t: any) => [t.at, t]));
     const top = d.bands[d.bands.length - 1].at;
     const sys = d.history.months.filter((_: string, i: number) => d.history.score[i] >= top);
     const years = [...new Set(sys.map((m: string) => m.slice(0, 4)))];
@@ -562,26 +569,32 @@ const ld = {
     const seg = d.bands
       .map((b: any, i: number) => `<span class="seg" style="--c:${BAND_COLORS[b.key]};flex:${(d.bands[i + 1]?.at ?? 100) - b.at}"><em>${esc(b.label)}</em></span>`)
       .join('');
-    // labels sorted by position and staggered on two rows, so close peaks (2007 at 82, 1973 at 84) don't overlap
+    // labels sorted by position and staggered on three rows, so close peaks (1973 and 2007 at 78, 1979 at 79) don't overlap
     const peaks = bt.crises
-      .filter((c: any) => ['1974', '1980', '2007', '2020', '2022'].includes(c.start.slice(0, 4)) || c.start.startsWith('1973'))
+      .filter((c: any) => ['1973', '1979', '2007', '2020', '2022'].includes(c.start.slice(0, 4)))
       .sort((a: any, b: any) => a.peak - b.peak)
-      .map((c: any, i: number) => `<span class="peak" style="left:${c.peak}%;--t:${i % 2 ? 20 : 6}px" title="${esc(c.label)}: ${c.peak}">${c.start.slice(0, 4)}</span>`)
+      .map((c: any, i: number) => `<span class="peak" style="left:${c.peak}%;--t:${[6, 20, 34][i % 3]}px" title="${esc(c.label)}: ${c.peak}">${c.start.slice(0, 4)}</span>`)
       .join('');
     $('scale').innerHTML = `<div class="segs">${seg}</div><div class="marks">${peaks}<span class="today" style="left:${d.score}%"><b>${d.score.toFixed(0)}</b>today</span></div>`;
+    // shares from the bins' counts (each horizon over the months whose outcome is known for it), rounded once
+    const bins = d.odds.bins, has = 'n12' in (bins[0] || {});
+    const share = (xs: any[], h: string) => {
+      const n = xs.reduce((a: number, x: any) => a + (has ? x['n' + h] : x.months), 0);
+      return n ? Math.round(100 * xs.reduce((a: number, x: any) => a + (has ? x['hit' + h] : x['crisis_' + h + 'm'] * x.months / 100), 0) / n) : null;
+    };
     $('bands').innerHTML = d.bands
       .map((b: any, i: number) => {
-        const t = th[b.at];
         const next = d.bands[i + 1]?.at ?? 100;
-        const inBand = d.odds.bins.filter((x: any) => x.lo >= b.at && x.lo < next);
-        const n = inBand.reduce((a: number, x: any) => a + x.months, 0);
-        const w = (k: string) => n ? Math.round(inBand.reduce((a: number, x: any) => a + x[k] * x.months, 0) / n) : null;
-        const stat = n ? `<span><b>${w('crisis_12m')}%</b> within a year</span><span><b>${w('crisis_24m')}%</b> within two</span><span>${n} months</span>` : '<span>not enough history</span>';
+        const inBand = bins.filter((x: any) => x.lo >= b.at && x.lo < next);
+        const n = inBand.reduce((a: number, x: any) => a + (has ? x.n12 : x.months), 0);
+        const stat = n ? `<span><b>${share(inBand, '12')}%</b> in or within a year of a crisis</span><span><b>${share(inBand, '24')}%</b> in or within two years</span><span>${n} months</span>` : '<span>not enough history</span>';
         const active = d.band.key === b.key ? ' active' : '';
         return `<div class="bandcard${active}" style="--c:${BAND_COLORS[b.key]}"><span class="range">${b.at}–${next}</span><p class="ans">${esc(b.answer)}</p><p class="bl">${esc(b.label)}</p><p class="st">${stat}</p></div>`;
       })
       .join('');
-    $('band-note').textContent = `Bands are set where the historical odds change: below 40, crises were rare; 40–50 is below the average month's odds; from 50 they are above it. On average ${bt.base}% of months were in a crisis or within a year of one. The score has reached ${top}+ only in ${years.join(', ')}: each time, governments or central banks had to step in to keep the system working.`;
+    const mine = bins.find((x: any) => x.lo <= d.score && d.score < x.lo + 5);
+    const today = mine ? ` Today's 5-point bin, ${mine.lo}–${mine.lo + 5}: ${mine.crisis_12m}% and ${mine.crisis_24m}% of ${mine.months} months.` : '';
+    $('band-note').textContent = `Bands are set where the historical odds change: below 40, crises were rare; 40–50 is below the average month (${share(bins, '12')}% of months were in a crisis or within a year of one, ${share(bins, '24')}% within two); from 50 they are above it, and the odds rise steeply inside 40–50.${today} The odds cards above ask a different question (a crisis starting, among months with none under way), so their numbers differ. The score has reached ${top}+ only in ${years.join(', ')}: each time, governments or central banks had to step in to keep the system working.`;
   }
 
   // ---------- history chart ----------
@@ -609,10 +622,10 @@ const ld = {
       const a = idx(c.start), b = idx(c.end);
       if (a >= 0 && b >= 0) s += `<rect x="${x(a)}" y="${T}" width="${Math.max(2, x(b) - x(a))}" height="${H - T - B}" class="crisis"><title>${esc(c.label)}</title></rect>`;
     });
-    // recessions (from the monthly NBER flags implied by start dates are approximate; draw a strip per recession start → 6+ months)
-    d.events.recessions.forEach((m: string) => {
-      const a = idx(m);
-      if (a >= 0) s += `<rect x="${x(a)}" y="${H - B - 5}" width="${(W - L - R) / n * 8}" height="5" class="rec"/>`;
+    // recessions: a strip from the first to the last NBER month (a JSON from before the spans were exported gets 8 months each)
+    (d.events.recession_spans ?? d.events.recessions.map((m: string) => [m, m])).forEach(([m0, m1]: [string, string]) => {
+      const a = idx(m0), b = idx(m1);
+      if (a >= 0) s += `<rect x="${x(a)}" y="${H - B - 5}" width="${b > a ? x(b) - x(a) : (W - L - R) / n * 8}" height="5" class="rec"/>`;
     });
     d.events.bear_markets.forEach((m: string) => {
       const a = idx(m);
@@ -684,7 +697,8 @@ const ld = {
 
   function drawScorecard(d: any) {
     const t = d.backtest.targets;
-    const cell = (r: any) => `${r.during ?? '—'} / ${r.ahead}`;
+    const f2 = (v: number | null) => v == null ? '—' : v.toFixed(2);
+    const cell = (r: any) => `${f2(r.during)} / ${f2(r.ahead)}`;
     const row = (k: string, name: string) =>
       `<tr><th>${name}</th><td>${t[k].events}</td><td>${cell(t[k].score)}</td><td>${cell(t[k].acute)}</td><td>${cell(t[k].structural)}</td><td>${cell(t[k].stagflation)}</td><td>${cell(t[k].model)}</td></tr>`;
     $('scorecard').innerHTML = `<table class="mini wide"><caption class="label">AUC during the event / in the 12 months before it (0.5 = coin flip, 1.0 = perfect)</caption>
@@ -763,7 +777,7 @@ const ld = {
       debtTimer = requestAnimationFrame(tick);
     };
     tick();
-    $('counter-note').textContent = `Last official figure ${money(m.us_debt.total / 1e12, 2)} trillion on ${m.us_debt.date} (Treasury, Debt to the Penny); counting at the last 12 months' pace of ${money(m.us_debt.per_second, 0)} per second. ${m.us_debt.gdp_pct.toFixed(0)}% of GDP.`;
+    $('counter-note').textContent = `Last official figure ${money(m.us_debt.total / 1e12, 2)} trillion on ${m.us_debt.date} (Treasury, Debt to the Penny); counting at the last 12 months' pace of ${money(m.us_debt.per_second, 0)} per second. Gross debt, including what the government owes its own trust funds: ${m.us_debt.gdp_pct.toFixed(0)}% of GDP${d.sustain ? `; held by the public, ${d.sustain.debt.toFixed(0)}%` : ''}.`;
     const g = m.government_debt;
     $('gov-title').textContent = `Government debt, % of GDP, ${g.year} (IMF) vs 2007`;
     const max = Math.max(...g.countries.map((c: any) => Math.max(c.pct, c.in_2007 ?? 0)));
@@ -851,8 +865,11 @@ const ld = {
       c.querySelector('.ov')!.textContent = `${x.like}%`;
       c.querySelector('.ob span')!.textContent = `average month ${x.base}%`;
       c.querySelector('.ob i')!.textContent = `${diff > 0 ? '+' : ''}${diff} pts`;
+      c.title = `about ${x.months} months' worth of history${x.per_point != null ? `; each point on the score moves this by about ${x.per_point.toFixed(1)}` : ''}`;
     });
-    $('odds-note').textContent = `Every month since 1973 with no crisis under way, weighted by how close its score was to today's ${d.score.toFixed(0)} (half weight 6 points away; about ${o.crisis_12m.months} months' worth), and what happened next, against the average month. History, not a forecast.`;
+    const c24 = o.crisis_24m;
+    const who = c24.drivers?.length ? ` The crisis cards rest on ${d.backtest.crises.length} crises: at today's score ${c24.drivers.map((x: [string, number]) => x[0].slice(0, 4)).join(', ')} carry ${c24.drivers.reduce((a: number, x: [string, number]) => a + x[1], 0)} of the two-year card's ${c24.like} points${c24.range ? `, and resampling the years gives roughly ${c24.range[0]}–${c24.range[1]}% for it` : ''}.` : '';
+    $('odds-note').textContent = `Every month since 1973 not already in the event, weighted by how close its score was to today's ${d.score.toFixed(0)} (half weight 6 points away), and what happened next, against the average month.${who} History, not a forecast.`;
   }
 
   const LEAD_COLORS: Record<string, string> = { stress: '#e05a47', warning: '#8fb3ff', permits: '#d9b45a', lending: '#c89cf0', claims: '#6fbf8e', vix_rise: '#9c9584' };
@@ -895,14 +912,14 @@ const ld = {
     if (!o) return;  // its sources failed this run: the panel keeps its placeholders
     const sg = (v: number, dp = 1) => `${v > 0 ? '+' : ''}${v.toFixed(dp)}%`;
     $('ol-stocks').textContent = sg(o.expected);
-    $('ol-stocks-note').textContent = `80% range ${sg(o.lo80)} to ${sg(o.hi80)}; the average decade since 1881 gave ${sg(o.average)}`;
+    $('ol-stocks-note').textContent = `80% range ${sg(o.lo80)} to ${sg(o.hi80)}; the average decade since 1871 gave ${sg(o.average)}`;
     $('ol-bonds').textContent = sg(o.tips, 2);
     const sp = o.since_peak_rate;
     $('ol-bonds-note').textContent = sp
       ? `The 10-year yield is ${o.y10.toFixed(2)}%, up ${sp.y10_change.toFixed(2)} pp since ${monthName(sp.month)} although the Fed has cut ${(-sp.fed_change).toFixed(2)} pp: lenders want more to lend long`
       : `The ordinary 10-year yield is ${o.y10.toFixed(2)}%`;
     $('ol-neg').textContent = `${o.p_negative}%`;
-    $('ol-neg-note').textContent = `${o.p_negative_all}% of all decades since 1881`;
+    $('ol-neg-note').textContent = `${o.p_negative_all}% of all decades since 1871`;
     $('ol-tips').textContent = `${o.p_below_tips}%`;
     $('beyond-table').innerHTML = `<thead><tr><th></th><th>Now</th><th>Known high</th></tr></thead><tbody>` + o.beyond
       .map((b: any) => `<tr><th>${esc(b.label)}${b.note ? ` <span class="muted">· ${esc(b.note)}</span>` : ''}</th><td class="down">${b.now.toFixed(1)}%</td><td class="muted">${b.known_max.toFixed(1)}% · ${monthName(b.known_max_month)}</td></tr>`)
@@ -937,9 +954,9 @@ const ld = {
       mg.length && `${mg.map(([c, x]) => `${{ US: 'US', GB: 'UK', DE: 'Germany' }[c]} ${th(x.pct)}`).join(', ')}, to ${q(mg[0][1])}. Not in the score.`);
     tile('so-tpu', s.trade, s.trade && th(s.trade.pct), s.trade && `${rec(s.trade)}. Not in the score.`);
     const n = s.news;
-    tile('so-news', n, n && th(100 - n.pct), n && `${sign(n.value)} on ${day(n.date)} (below zero is negative); the low, ${sign(n.max)}, was in ${monthName(n.max_month)}. Not in the score: it flags crises as they happen, but markets get there first.`);
+    tile('so-news', n, n && th(100 - n.pct), n && `${sign(n.value)} on ${day(n.date)} (below zero is negative); the low, ${sign(n.max)}, was in ${monthName(n.max_month)}. In the stress pillar since v8: it flags crises as they happen; its 12-month calm is in build-up, as calm came before crises.`);
     const e = s.eu_conf;
-    tile('so-euconf', e, e && th(100 - e.pct), e && `confidence ${sign(e.value, 1)} in ${monthName(e.date)}; the low, ${sign(e.max, 1)}, was in ${monthName(e.max_month)}. Not in the score.`);
+    tile('so-euconf', e, e && th(100 - e.pct), e && `confidence ${sign(e.value, 1)} in ${monthName(e.date)}; the low, ${sign(e.max, 1)}, was in ${monthName(e.max_month)}. In the stress pillar since v8.`);
     const u = s.unrest_world;
     tile('so-unrest', u, u && u.value.toFixed(0), u && `of about 130 the IMF tracks · ${th(u.pct)} percentile since ${u.since} · the record, ${u.max.toFixed(0)}, was ${monthName(u.max_month)} · to ${monthName(u.date)} · not in the score`);
     $('unrest-table').innerHTML = `<thead><tr><th></th><th>Percentile</th><th>Latest</th></tr></thead><tbody>` + Object.entries(s.unrest_countries || {})
@@ -953,13 +970,13 @@ const ld = {
     if (!s) return;  // a JSON from before v8 (mid-deploy)
     const sc = Object.fromEntries(s.scenarios.map((x: any) => [x.key, x]));
     const q = (m: string) => `Q${Math.ceil(+m.slice(5, 7) / 3)} ${m.slice(0, 4)}`;
-    const gap = s.primary - s.stabilising;
+    const gap = s.primary - s.stabilising, gapMkt = s.primary - (s.stabilising_market ?? s.stabilising);  // the same test as the summary
     $('su-debt').textContent = s.debt.toFixed(0) + '%';
-    $('su-debt-note').textContent = (gap <= 0.3 ? `held steady only because the economy grows ${s.growth.toFixed(1)}% a year in dollars, much of it inflation` : `rising by about ${gap.toFixed(1)}% of GDP a year`) +
+    $('su-debt-note').textContent = (gap > 0.3 ? `rising by about ${gap.toFixed(1)}% of GDP a year` : gapMkt > 0.3 ? `held steady only while the economy grows ${s.growth.toFixed(1)}% a year in dollars and the old cheap debt lasts (at today's 10-year yield it would rise ${gapMkt.toFixed(1)}% of GDP a year)` : 'held steady at today’s growth and rates') +
       ` · deficit ${s.deficit.toFixed(1)}% of GDP in fiscal ${s.fiscal_year}, ${s.interest.toFixed(1)} of it interest`;
     const n = sc.normal;
     $('su-cross').textContent = n?.cross30 ? String(n.cross30) : 'not by ' + (n.y20.year + 10);
-    $('su-cross-note').textContent = `today ${s.interest_share}% · ` + ['market', 'slowdown', 'inflation'].map((k) => sc[k] && `${sc[k].cross30 ?? 'later'} ${{ market: 'if today’s rates stay', slowdown: 'with slower growth', inflation: 'if inflation keeps doing the work' }[k]}`).filter(Boolean).join(' · ');
+    $('su-cross-note').textContent = `fiscal ${s.fiscal_year}: ${s.interest_share}% (net interest) · ` + ['market', 'slowdown', 'inflation'].map((k) => sc[k] && `${sc[k].cross30 ?? 'later'} ${{ market: 'if today’s rates stay', slowdown: 'with slower growth', inflation: `if ${sc.inflation.growth.toFixed(0)}% growth continues` }[k]}`).filter(Boolean).join(' · ');
     const h = s.holders, money = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(2)}T` : `$${v.toFixed(0)}bn`;
     if (s.foreign_share != null) {
       $('su-foreign').textContent = s.foreign_share.toFixed(0) + '%';
@@ -972,7 +989,9 @@ const ld = {
     }
     $('su-table').innerHTML = `<thead><tr><th></th><th>Debt ${s.scenarios[0].y10.year}</th><th>Interest</th><th>${s.scenarios[0].y20.year}</th><th>30%</th></tr></thead><tbody>` +
       s.scenarios.map((x: any) => `<tr><th>${esc(x.label)} <span class="muted">${x.growth.toFixed(0)}% growth, new debt at ${x.new_rate.toFixed(1)}%</span></th><td>${x.y10.debt}%</td><td class="${x.y10.interest_share >= 30 ? 'down' : ''}">${x.y10.interest_share}%</td><td>${x.y20.debt}% · <span class="${x.y20.interest_share >= 30 ? 'down' : ''}">${x.y20.interest_share}%</span></td><td>${x.cross30 ?? '—'}</td></tr>`).join('') + '</tbody>';
-    $('su-how').textContent = `Each year: debt grows with the interest on it and the deficit before interest (${s.primary.toFixed(1)}% of GDP, held as it is), and shrinks as the economy grows in dollars. The average rate on the debt (${s.avg_rate.toFixed(2)}%) moves toward what new 10-year borrowing costs (${s.new_rate.toFixed(2)}%) as old debt is refinanced, about a sixth a year. Holding debt steady at 4% growth would take a surplus of ${(-s.stabilising_normal).toFixed(1)}% of GDP before interest instead of a ${s.primary.toFixed(1)}% deficit. Meanwhile ${s.inflation.toFixed(1)}% inflation shrinks the debt by about ${s.inflation_erosion.toFixed(1)}% of GDP a year: that is the quiet way out, and savers and wage-earners pay for it.`;
+    const need = s.stabilising_normal < 0 ? `a surplus of ${(-s.stabilising_normal).toFixed(1)}% of GDP before interest` : `a deficit before interest of no more than ${s.stabilising_normal.toFixed(1)}% of GDP`;
+    const liq = s.liquidation ?? s.inflation_erosion - s.debt * s.avg_rate / 100;
+    $('su-how').textContent = `Each year: debt grows with the interest on it and the deficit before interest (${s.primary.toFixed(1)}% of GDP, held as it is), and shrinks as the economy grows in dollars. The average rate on the debt (${s.avg_rate.toFixed(2)}%) moves toward what new 10-year borrowing costs (${s.new_rate.toFixed(2)}%) as old debt is refinanced, about a sixth a year; the table starts near 20% because it applies that average rate to all debt held by the public. In the back-to-normal case (${n.growth.toFixed(0)}% growth, new debt at ${n.new_rate.toFixed(1)}%) holding debt steady would take ${need} instead of a ${s.primary.toFixed(1)}% deficit. Inflation at ${s.inflation.toFixed(1)}% erodes the debt by about ${s.inflation_erosion.toFixed(1)}% of GDP a year, but the Treasury pays about ${s.avg_rate.toFixed(1)}% on it: net, its holders lose roughly ${liq.toFixed(1)}% of GDP a year to inflation. The quiet way out works only while inflation runs above what the debt pays.`;
     $('su-watch').innerHTML = s.watch.map((w: any) => `<li class="${w.crossed ? 'met' : ''}"><b>${w.crossed ? '■' : '□'}</b><span>${esc(w.label)}</span><em>now ${esc(w.now)}</em></li>`).join('');
     const row = (label: string, x: any) => x ? `<tr><th>${label}</th><td>${money(x.now)}</td><td class="muted">peak ${money(x.peak)} (${monthName(x.peak_date)}) · a year ago ${money(x.year_ago)}</td></tr>` : '';
     const gy = s.gold?.yearly.slice(-4).map(([y, v]: [number, number]) => `${y} ${v > 0 ? '+' : ''}${v}`).join(', ');
@@ -1083,19 +1102,20 @@ const ld = {
     $('updated').textContent = 'updated ' + ago(d.updated);
     const sr = d.structural_rank;
     if (d.summary) $('summary').textContent = d.summary; // written by collect.py, which also bakes it into the page
-    const ro = (id: string, v: number) => { $(id).textContent = v.toFixed(0); $(id).style.color = BAND_COLORS[bandOf(v, d.bands).key]; };
+    // the bands were calibrated on the score's crisis odds: "crisis now" follows them, the other readouts stay neutral
+    const ro = (id: string, v: number, banded = false) => { $(id).textContent = v.toFixed(0); $(id).style.color = banded ? BAND_COLORS[bandOf(v, d.bands).key] : ''; };
     $('flag-strip').innerHTML = d.flags.high.slice(0, 5).map((f: any) => `<a class="fchip" href="#flags-s"><i></i>${esc(f.label)} <b>${esc(f.shown)}</b></a>`).join('') +
       (d.flags.high.length > 5 ? `<a class="fchip more" href="#flags-s">+${d.flags.high.length - 5} more</a>` : '');
     const KIND: Record<string, string> = { record: 'Record', move: 'Sudden move', gap: 'Markets apart' };
     $('unusual-list').innerHTML = (d.unusual || []).map((u: any) => `<li><i>${KIND[u.kind]}</i><span>${esc(u.label)} <b>${esc(u.shown)}</b></span><em>${esc(u.note)}</em></li>`).join('') ||
       '<li class="none">Nothing out of the ordinary: no records, sudden moves or markets pulling apart.</li>';  // collect.py bakes the same markup
-    ro('ro-acute', d.acute);
+    ro('ro-acute', d.acute, true);
     ro('ro-structural', d.structural);
     ro('ro-stag', d.stagflation);
     $('ro-rec').textContent = `${d.forecast.probability.toFixed(0)}%`;
     $('ro-record').textContent = `record ${sr.max.toFixed(0)}, ${monthName(sr.max_month)}`;
-    const t = d.backtest.targets;
-    $('good-at').textContent = `Telling calm from crisis. During US recessions the score ran higher than in normal months (AUC ${t.recession.score.during}); a year before them it was already elevated (AUC ${t.recession.score.ahead}), and the recession model alone scored ${d.forecast.track.auc} out of sample. The stagflation index flagged stagflation a year ahead with an AUC of ${t.stagflation.stagflation.ahead}. Of all months scoring 70 or more since 1973, ${d.backtest.thresholds.find((x: any) => x.at === 70)?.near}% were inside a crisis or within a year of one.`;
+    const t = d.backtest.targets, f2 = (v: number) => v.toFixed(2);
+    $('good-at').textContent = `Telling calm from crisis. During US recessions the score ran higher than in normal months (AUC ${f2(t.recession.score.during)}); a year before them it was already elevated (AUC ${f2(t.recession.score.ahead)}), and the recession model alone scored ${f2(d.forecast.track.auc)} out of sample. The stagflation index flagged stagflation a year ahead with an AUC of ${f2(t.stagflation.stagflation.ahead)}. Of all months scoring 70 or more since 1973, ${d.backtest.thresholds.find((x: any) => x.at === 70)?.near}% were inside a crisis or within a year of one.`;
     drawGauge(d);
     drawPillars(d);
     drawBands(d);
@@ -1329,7 +1349,7 @@ const ld = {
   :global(.segs) { display: flex; height: 30px; }
   :global(.seg) { display: flex; align-items: center; justify-content: center; min-width: 0; background: color-mix(in srgb, var(--c) 26%, var(--surface)); border-right: 1px solid var(--bg); }
   :global(.seg em) { padding-inline: 4px; font: 600 0.66rem var(--body); font-style: normal; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
-  :global(.marks) { position: relative; height: 36px; }
+  :global(.marks) { position: relative; height: 50px; }
   :global(.peak) { position: absolute; top: var(--t, 6px); translate: -50% 0; font: 600 0.64rem/1 var(--mono); color: var(--muted); }
   :global(.peak::before) { content: ''; position: absolute; left: 50%; bottom: 100%; width: 1px; height: calc(var(--t, 6px) - 1px); background: var(--muted); }
   :global(.today) { position: absolute; top: -68px; translate: -50% 0; display: grid; justify-items: center; gap: 2px; font: 600 0.64rem var(--mono); text-transform: uppercase; color: var(--ink); z-index: 1; }

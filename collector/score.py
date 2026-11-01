@@ -14,7 +14,7 @@ Five pillars, each 0–1 (higher = more stress); score = 100 × (2·stress + war
               calm geopolitics has been over the past year (complacency).
 History uses expanding-window percentiles and a walk-forward model: what the gauge would have said at the time.
 """
-import bisect, math, sys
+import bisect, math, random, sys
 from itertools import groupby
 import forecast
 from datetime import datetime, timezone, date, timedelta
@@ -29,12 +29,15 @@ VERSION = 8  # v1 market stress; v2 + walk-forward recession model; v3 + inflati
 WEIGHTS = {'stress': 2, 'warning': 1, 'money': 1, 'fiscal': 1, 'buildup': 1}
 # Quarterly and annual data enter the history when it was published, not at the quarter it describes (months after the
 # observation date): Z.1 financial accounts ~10 weeks after quarter end, GDP's advance estimate a month after, BIS ~6 months.
+# Monthly series sit at the month they describe, except SAVING (dated at publication, as the live 12-month low-saving reading
+# carries it; moving it changed no target, 2026-11).
 LAGS = {'EQUITY_MV': 5, 'CORP_DEBT': 5, 'HH_DEBT': 5, 'NIIP': 5, 'GDP': 3, 'DEBT_GDP': 3, 'INTEREST': 4, 'RECEIPTS': 4,
         'FED_DEBT_LEVEL': 3, 'DEFICIT_GDP': 9, 'BIS_CREDIT': 8, 'HH_CREDIT_BIS': 8, 'DELINQ_ALL': 6, 'DELINQ_MORTGAGE': 6, 'DSR': 6,
         'DSR_OLD': 6, 'SAVING': 2}
 # Bands calibrated on historical odds (v6 backtest, 1973–2026), sharper in v8: below 40, a crisis was under way or began
-# within 12 months in 0% of months; 40–50, 14% (below the 45% average); 50–60, 57% (above it); 60–70, 81%; 70+, all of them.
-# 75+ only in 1973–74, 1979–80 and 2008, the episodes that needed system-wide rescues. The page shows the odds.
+# within 12 months in 0% of months; 40–50, 14% (below the 44% average; 6% at 40–45, 42% at 45–50); 50–60, 53% (above it);
+# 60–70, 81%; 70+, all of them. 75+ only in 1973–74, 1979–80 and 2008, the episodes that needed system-wide rescues.
+# The page shows the odds, per band and for today's 5-point bin.
 BANDS = [  # (from, key, answer, label)
     (0, 'calm', 'NO', 'Calm'),
     (40, 'normal', 'NO', 'Normal'),
@@ -160,16 +163,13 @@ def components(db):
     months = span('1950-01', today)
     M = lambda k, how='last': {shift(m, LAGS.get(k, 0)): v for m, v in monthly(db, k, how).items()}
     baa, gs10, tb3, cpi, ff, unr = M('BAA'), M('GS10'), M('TB3MS'), M('CPI'), M('FEDFUNDS'), M('UNRATE')
-    gold_m, eq, gdp = M('GOLD_M'), M('EQ_US'), ffill(M('GDP'), months, 4)
+    gold_m, eq = M('GOLD_M'), M('EQ_US')
     yoy = lambda s, k=12: {m: s[m] / s[shift(m, -k)] - 1 for m in s if shift(m, -k) in s and s[shift(m, -k)]}
     infl = yoy(cpi)
     real_gold = {m: gold_m[m] / cpi[m] for m in gold_m if m in cpi}
     interest, receipts = ffill(M('INTEREST'), months, 4), ffill(M('RECEIPTS'), months, 4)
     burden = {m: interest[m] / receipts[m] for m in interest if m in receipts}
     debt_ratio = ffill(M('DEBT_GDP'), months, 4)
-    debt_level = {m: debt_ratio[m] / 100 * gdp[m] for m in debt_ratio if m in gdp}
-    eff_r = {m: 100 * interest[m] / debt_level[m] for m in interest if m in debt_level}
-    g_nom = {m: 100 * (gdp[m] / gdp[shift(m, -12)] - 1) for m in gdp if shift(m, -12) in gdp}
     dd = {m: 1 - eq[m] / max(eq[x] for x in months[max(0, i - 12):i + 1] if x in eq) for i, m in enumerate(months) if m in eq}
     # rise vs the 12-month low; tolerates missing months (BLS published no October 2025 data during the shutdown)
     unemp = {}
@@ -186,16 +186,18 @@ def components(db):
         for m, v in ffill({d[:7]: v for d, v in rows(db, f'GOVDEBT_{c}') if d[:4] < today[:4]}, months, 14).items():
             g7.setdefault(m, []).append(v)
     g7 = {m: sum(v) / len(v) for m, v in g7.items() if len(v) >= 5}
-    niip = ffill(M('NIIP'), months, 4)
 
     gold_d, gold = latest(db, 'GOLD')
     cpi_d, cpi_now = latest(db, 'CPI')
     last = lambda key: tuple(latest(db, key))
     tail = lambda h: (max(h) + '-01', h[max(h)])  # newest monthly value
+    # a change over k months on a quarterly series: taken on the quarterly grid (before forward-filling), so a carried-forward
+    # newest quarter is never set against a denominator that has already moved on a quarter
+    diff = lambda q, k: ffill({m: q[m] - q[shift(m, -k)] for m in q if shift(m, -k) in q}, months, 4)
     C = {}
 
-    def add(key, label, pillar, hist, now, series, unit):
-        C[key] = dict(label=label, pillar=pillar, hist=hist, now=now, series=series, unit=unit)
+    def add(key, label, pillar, hist, now, series, unit, obs=None):  # obs: the observation date shown, if not now's or the series' last
+        C[key] = dict(label=label, pillar=pillar, hist=hist, now=now, series=series, unit=unit, obs=obs)
 
     # stress: is a crisis happening?
     add('nfci', 'Financial conditions (Chicago Fed NFCI)', 'stress', M('NFCI', 'mean'), last('NFCI'), 'NFCI', 'idx')
@@ -239,12 +241,13 @@ def components(db):
         (usd_d, -(usd_now / value_at(db, 'USD', days_before(usd_d, 365)) - 1)), 'USD', 'neg_ratio')
     # fiscal: how much could break?
     add('debt_gdp', 'US federal debt, % of GDP', 'fiscal', debt_ratio, last('DEBT_GDP'), 'DEBT_GDP', 'pct')
-    add('interest', 'Interest bill, share of federal revenue', 'fiscal', burden, tail(burden), 'INTEREST', 'ratio')
+    add('interest', 'Interest bill, share of federal revenue (national accounts)', 'fiscal', burden, tail(burden), 'INTEREST', 'ratio')
     # r − g with the marginal rate (what new borrowing costs: the 10-year yield) against 5-year nominal GDP growth
-    g5 = {m: 100 * ((gdp[m] / gdp[shift(m, -60)]) ** 0.2 - 1) for m in gdp if shift(m, -60) in gdp}
+    gq = M('GDP')  # quarterly grid: 20 quarters back, whatever the forward-fill
+    g5 = ffill({m: 100 * ((gq[m] / gq[shift(m, -60)]) ** 0.2 - 1) for m in gq if shift(m, -60) in gq}, months, 4)
     rg = {m: gs10[m] - g5[m] for m in gs10 if m in g5}
     y_d0, y10_0 = last('DGS10')
-    add('r_g', 'Borrowing cost minus growth (10y yield − 5y GDP growth)', 'fiscal', rg, (y_d0, y10_0 - g5[max(g5)]), 'GDP', 'pp')
+    add('r_g', 'Borrowing cost minus growth (10y yield − 5y GDP growth)', 'fiscal', rg, (y_d0, y10_0 - g5[max(g5)]), 'GDP', 'pp', obs=y_d0)
     deficit = {m: -v for m, v in ffill(M('DEFICIT_GDP'), months, 14).items()}
     add('deficit', 'Federal deficit, % of GDP', 'fiscal', deficit, tail(deficit), 'DEFICIT_GDP', 'pct')
     # federal debt growth after inflation, per year over 5 years (nominal growth flatters the high-inflation 1970s–80s)
@@ -252,22 +255,28 @@ def components(db):
     infl5 = {m: (cpi[m] / cpi[shift(m, -60)]) ** 0.2 - 1 for m in cpi if shift(m, -60) in cpi}
     growth = {m: (fdebt[m] / fdebt[shift(m, -60)]) ** 0.2 - 1 - infl5[m] for m in fdebt if shift(m, -60) in fdebt and m in infl5}
     add('debt_growth', 'Federal debt growth after inflation, per year (5y)', 'fiscal', growth, tail(growth), 'FED_DEBT_LEVEL', 'ratio')
-    # how stretched private balance sheets and stock prices are
-    eqv = {m: v / 1000 / gdp[m] for m, v in ffill(M('EQUITY_MV'), months, 4).items() if m in gdp}
+    # how stretched private balance sheets and stock prices are: each Z.1 quarter over the same quarter's GDP, placed at the
+    # later publication (Z.1's), then carried forward
+    gdp_q = monthly(db, 'GDP')
+    over_gdp = lambda k, sign=1: ffill({shift(m, LAGS[k]): sign * v / 1000 / gdp_q[m] for m, v in monthly(db, k).items() if m in gdp_q}, months, 4)
+    eqv = over_gdp('EQUITY_MV')
     add('valuation', 'US company shares, listed and private, % of GDP', 'fiscal', eqv, tail(eqv), 'EQUITY_MV', 'ratio')
-    corp = {m: v / 1000 / gdp[m] for m, v in ffill(M('CORP_DEBT'), months, 4).items() if m in gdp}
+    corp = over_gdp('CORP_DEBT')
     add('corp_debt', 'Corporate debt, % of GDP', 'fiscal', corp, tail(corp), 'CORP_DEBT', 'ratio')
-    ext = {m: -niip[m] / 1000 / gdp[m] for m in niip if m in gdp}
+    ext = over_gdp('NIIP', -1)
     add('niip', 'Net foreign debt, % of GDP (NIIP)', 'fiscal', ext, tail(ext), 'NIIP', 'ratio')
-    add('g7_debt', 'G7 average government debt, % of GDP', 'fiscal', g7, tail(g7), 'GOVDEBT_USA', 'pct')
+    add('g7_debt', 'G7 average government debt, % of GDP', 'fiscal', g7, tail(g7), 'GOVDEBT_USA', 'pct',
+        obs=max(d for d, _ in rows(db, 'GOVDEBT_USA') if d[:4] < today[:4]))
     add('real_gold', 'Gold price adjusted for inflation', 'fiscal', real_gold, (gold_d, gold / cpi_now), 'GOLD', 'real_gold')
     y_d, y10 = last('DGS10')
     sell = {m: gs10[m] - gs10[shift(m, -3)] for m in gs10 if shift(m, -3) in gs10}
     add('bond_selloff', '10-year yield, 3-month change', 'fiscal', sell, (y_d, y10 - value_at(db, 'DGS10', days_before(y_d, 91))),
         'DGS10', 'pp')
-    # funding dislocations (monthly worst day): banks' 3-month borrowing cost over T-bills, and near-term fear over 3-month
+    # funding dislocations (worst day of each month; live: the worst day of the past 31 days, a window as long as the history's,
+    # so the reading doesn't start each month low): banks' 3-month borrowing cost over T-bills, and near-term fear over 3-month
     S = lambda k: rows(db, k)
     mmax = lambda pts: {m: max(v for d, v in g) for m, g in groupby(pts, key=lambda p: p[0][:7])}
+    recent = lambda pts: (pts[-1][0], max(v for d, v in pts if d > days_before(pts[-1][0], 31)))
     bill = dict(S('TBILL_3M'))
     week_bill = lambda d: [bill[x] for x in (days_before(d, k) for k in range(7)) if x in bill]
     old = [(d, v - sum(b) / len(b)) for d, v in S('CP_OLD') if (b := week_bill(d))]  # weekly averages, 1971–97
@@ -276,11 +285,11 @@ def components(db):
         lap = [v for d, v in old if d >= new[0][0]], [v for d, v in new if d <= old[-1][0]]
         adj = sum(lap[0]) / len(lap[0]) - sum(lap[1]) / len(lap[1])  # the two series overlap in 1997; level the older one
         cp = mmax([(d, v - adj) for d, v in old if d < new[0][0]] + new)
-        add('cp_bill', 'Commercial paper over T-bills, worst day this month', 'stress', cp, (new[-1][0], cp[max(cp)]), 'CP_FIN_3M', 'pp')
+        add('cp_bill', 'Commercial paper over T-bills, worst day of the past month', 'stress', cp, recent(new), 'CP_FIN_3M', 'pp')
     vix3m = dict(S('VIX3M'))
-    vr = mmax([(d, v / vix3m[d]) for d, v in S('VIX') if d in vix3m])
-    add('vix_curve', 'VIX over VIX3M (above 1: fear is front-loaded), worst day this month', 'stress', vr,
-        (max(vix3m), vr[max(vr)]), 'VIX3M', 'x')
+    vrd = [(d, v / vix3m[d]) for d, v in S('VIX') if d in vix3m]
+    add('vix_curve', 'VIX over VIX3M (above 1: fear is front-loaded), worst day of the past month', 'stress', mmax(vrd),
+        recent(vrd), 'VIX3M', 'x')
     # policy uncertainty: how much newspapers write about it (US, Europe). It rises as trouble arrives, not before
     for key, series, label in (('epu_us', 'EPU_US', 'US economic policy uncertainty (newspapers)'),
                                ('epu_eu', 'EPU_EU', 'Europe economic policy uncertainty (newspapers)')):
@@ -288,12 +297,12 @@ def components(db):
         if h:
             add(key, label, 'stress', h, tail(h), series, 'pts')
     # build-up: how fast private debt outgrew the economy over 3 years, and how cheap credit was two years ago
-    bis = ffill(M('BIS_CREDIT'), months, 4)
-    boom = {m: bis[m] - bis[shift(m, -36)] for m in bis if shift(m, -36) in bis}
+    boom = diff(M('BIS_CREDIT'), 36)
     if boom:
         add('boom', 'Private credit growth, 3 years (pp of GDP, BIS)', 'buildup', boom, tail(boom), 'BIS_CREDIT', 'pp_gdp')
     cheap = {shift(m, 24): -v for m, v in ffill(C['credit']['hist'], months, 6).items() if shift(m, 24) <= today}  # low then = risk now
-    add('sentiment', 'Baa credit spread two years ago (low = complacency)', 'buildup', cheap, tail(cheap), 'BAA', 'neg_pp')
+    add('sentiment', 'Baa credit spread two years ago (low = complacency)', 'buildup', cheap, tail(cheap), 'BAA', 'neg_pp',
+        obs=shift(max(cheap), -24) + '-01')
     # geopolitical calm: crises since 1900 tended to start after quiet years (late 1990s, 2018–19, 2021), not tense ones
     g = M('GPR_H')
     calm = {m: -sum(g[shift(m, -j)] for j in range(12)) / 12 for m in g if all(shift(m, -j) in g for j in range(12))}
@@ -326,7 +335,7 @@ def components(db):
     hh = ffill(M('HH_CREDIT_BIS'), months, 4)
     if hh:
         add('hh_credit', 'Household credit, % of GDP (BIS)', 'fiscal', hh, tail(hh), 'HH_CREDIT_BIS', 'pct')
-        g3 = {m: hh[m] - hh[shift(m, -36)] for m in hh if shift(m, -36) in hh}
+        g3 = diff(M('HH_CREDIT_BIS'), 36)
         add('hh_credit_3y', 'Household credit growth, 3 years (pp of GDP, BIS)', 'buildup', g3, tail(g3), 'HH_CREDIT_BIS', 'pp_gdp')
     sv = M('SAVING')
     s12 = {m: -sum(sv[shift(m, -k)] for k in range(12)) / 12 for m in sv if all(shift(m, -k) in sv for k in range(12))}
@@ -342,12 +351,17 @@ def components(db):
     for c in C.values():  # carry each input's latest value forward (≤ 6 months), as the live reading does
         c['hist'] = ffill(c['hist'], months, 6)
 
-    # warning-pillar inputs (forecast.py): 10y−3m spread, constant-maturity daily data from 1982, bills before
+    # warning-pillar inputs (forecast.py): 10y−3m spread, constant-maturity daily data from 1982, bills before. TB3MS is a
+    # discount rate; converted to the bond-equivalent yield T10Y3M uses (365·d / (360 − 0.91·d)), it matches it to 0.01 pp
+    # where the two overlap, so 1979–81 inversions read as deep as they would today
     t10y3m = M('T10Y3M', 'mean')
+    bey = lambda d: 365 * d / (360 - 0.91 * d)
     # every month either series covers: GS10's monthly average arrives days after the month ends, T10Y3M is daily
-    spread = {m: t10y3m[m] if m in t10y3m else gs10[m] - tb3[m] for m in sorted(set(gs10) | set(t10y3m)) if m in t10y3m or m in tb3}
+    spread = {m: t10y3m[m] if m in t10y3m else gs10[m] - bey(tb3[m]) for m in sorted(set(gs10) | set(t10y3m)) if m in t10y3m or m in tb3}
     spread[today] = latest(db, 'T10Y3M')[1]  # today's curve, not the month-to-date average
-    W = dict(spread=spread, nfci=M('NFCI', 'mean'), ebp=M('EBP'), usrec=M('USREC'))
+    # the excess bond premium arrives about a month late: carry it over the gap (≤ 2 months, never into the live month, which
+    # uses it the same way in report()), so the history doesn't skip the month before today for the first weeks of each month
+    W = dict(spread=spread, nfci=M('NFCI', 'mean'), ebp=ffill(M('EBP'), [m for m in months if m < today], 2), usrec=M('USREC'))
     W['nfci'][today] = latest(db, 'NFCI')[1]
     X = dict(infl=infl, unemp=unemp, ff=ff)  # for the stagflation target
     return C, W, X, months
@@ -414,7 +428,7 @@ def warning_pillar(W, F, months):
 # Worked examples for the page: what the gauge said at the time (numbers filled in from the backtest)
 CASES = [
     ('1973-10', 'Oil embargo', 'Seven months after the world gave up fixed exchange rates, Arab producers cut oil supplies.'),
-    ('1974-11', 'The deepest reading on record', 'Stocks are down by nearly half, inflation is in double digits and banks are failing.'),
+    ('1974-11', 'Stocks halve, banks fail', 'Stocks are down by nearly half, inflation is in double digits and banks are failing.'),
     ('1980-01', 'Gold peaks at $850', 'US inflation is running at 14% and confidence in the dollar is at a low.'),
     ('1987-10', 'Black Monday', 'The Dow falls 22.6% in a single day, with almost no warning in the data beforehand.'),
     ('2006-12', 'A quiet warning', 'Markets are calm, but the yield curve has been inverted for six months.'),
@@ -430,19 +444,23 @@ def events(db, months, X):
     """What the backtest tries to anticipate: hand-picked crises, NBER recessions, 20% stock-market falls, stagflation."""
     usrec, eq = monthly(db, 'USREC'), monthly(db, 'EQ_US')
     rec = [m for m in sorted(usrec) if usrec[m] == 1 and usrec.get(shift(m, -1)) == 0]
-    bear, peak, down = [], None, False
+    # a 20% fall: the first month the (monthly-average) index closes 20% under its running peak; "inside" = every month 20%
+    # or more under it, so a month already deep in a fall isn't counted as one with no fall ahead
+    bear, falling, peak, down = [], set(), None, False
     for m in months:
         if m in eq:
             if peak is None or eq[m] > peak:
                 peak, down = eq[m], False
-            if not down and eq[m] <= 0.8 * peak:
-                bear.append(m)
-                down = True
+            if eq[m] <= 0.8 * peak:
+                falling.add(m)
+                if not down:
+                    bear.append(m)
+                    down = True
     stag = {m for m in X['infl'] if X['infl'][m] >= 0.05 and X['unemp'].get(m, 0) >= 0.5}  # 5%+ inflation, rising unemployment
     stag_starts = [m for m in sorted(stag) if shift(m, -1) not in stag and shift(m, -2) not in stag]
     return dict(crisis=([a for a, _, _ in CRISES], {m for a, b, _ in CRISES for m in span(a, b)}),
                 recession=(rec, {m for m in usrec if usrec[m] == 1}),
-                bear=(bear, set()),
+                bear=(bear, falling),
                 stagflation=(stag_starts, stag))
 
 
@@ -473,7 +491,7 @@ def backtest(series, prob, ev):
 
     starts, inside = ev['crisis']
     near = lambda m: m in inside or any(m < s <= shift(m, 12) for s in starts)
-    test = [m for m in sorted(H) if m <= shift(max(starts), 12)]
+    test = [m for m in sorted(H) if m <= end]  # the same window as the AUC rows: every month whose 12 months are known
     thresholds = []
     for th in [b[0] for b in BANDS[1:]]:
         hit = [m for m in test if H[m] >= th]
@@ -492,7 +510,7 @@ def shown(c, real80):
     v, u = c['now'][1], c['unit']
     return {'idx': f'{v:.2f}', 'idx3': f'{v:.3f}', 'pts': f'{v:.1f}', 'pp': f'{v:+.2f} pp', 'ratio': f'{100 * v:.1f}%',
             'ratio_pp': f'{100 * v:+.1f} pp', 'pct': f'{v:.1f}%', 'log': f'{100 * (math.exp(v) - 1):+.1f}%',
-            'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs 1980 peak',
+            'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs Jan 1980 average',
             'pp_gdp': f'{v:+.1f} pp', 'neg_pp': f'{-v:.2f} pp', 'x': f'{v:.2f}', 'neg_pts': f'{-v:.0f}', 'neg_idx': f'{-v:+.2f}',
             'neg_pts1': f'{-v:+.1f}', 'neg_pct': f'{-v:.1f}%'}[u]
 
@@ -506,7 +524,7 @@ def hyperinflation(db, C):
         ('Monthly inflation above 50% (Cagan’s definition of hyperinflation)', 100 * (c1 / c0 - 1), 50, '%'),
         ('Annual inflation above 40% (the "high-inflation crisis" line)', 100 * C['cpi']['now'][1], 40, '%'),
         ('Long-run inflation expectations above 3% (de-anchoring)', C['exp5y5y']['now'][1], 3, '%'),
-        ('Interest bill above 30% of federal revenue', 100 * C['interest']['now'][1], 30, '%'),
+        ('Interest bill above 30% of federal revenue (national accounts, latest quarter)', 100 * C['interest']['now'][1], 30, '%'),
         ('Federal deficit above 10% of GDP', C['deficit']['now'][1], 10, '%'),
         ('Fed balance sheet growing over 25% a year (money printing)', 100 * fed, 25, '%'),
         ('Dollar down over 20% in a year', -100 * C['usd_fall']['now'][1], -20, '%'),
@@ -578,8 +596,10 @@ def unusual(db, C, show, gaps):
         recent = [m for m, x in h.items() if x > v and year_ago <= m < d[:7]]
         if older and int(max(older)[:4]) > int(d[:4]) - RECORD_YEARS:
             continue
+        top = max(recent, key=h.get) if recent else None
         note = (f'a level last seen in {max(older)[:4]}' if older else
-                f'near the record set in {mon(max(recent, key=h.get))}' if recent else f'highest on record (data from {min(h)[:4]})')
+                f'near the record set in {mon(top)}' if recent and abs(v - h[top]) <= 0.05 * abs(h[top]) else
+                f'highest outside the past year; the record was {mon(top)}' if recent else f'highest on record (data from {min(h)[:4]})')
         out.append(dict(kind='record', key=k, label=c['label'], shown=show(c), date=d[:10], note=note))
     for key, label, log in MOVERS:
         r = [x for x in rows(db, key) if x[1] > 0 or not log]  # WTI went below zero in April 2020
@@ -620,7 +640,8 @@ def leads(db, P, months, ev, now):
         'vix_rise': ('VIX, 3-month rise', {m: vix[m] - vix[shift(m, -3)] for m in vix if shift(m, -3) in vix}),
     }
     pc = {k: expanding(h, months) if k not in ('stress', 'warning') else h for k, (_, h) in sig.items()}
-    starts = sorted(set(ev['crisis'][0] + ev['bear'][0]))
+    # since 1973, each episode once: a 20% fall that began inside a listed crisis is that crisis (all of them so far)
+    starts = sorted(set(ev['crisis'][0] + [b for b in ev['bear'][0] if b >= '1973-01' and b not in ev['crisis'][1]]))
     lags = list(range(-24, 13))
     study = {k: [round(100 * sum(v) / len(v)) if (v := [pc[k][shift(x, l)] for x in starts if shift(x, l) in pc[k]]) else None
                  for l in lags] for k in pc}
@@ -648,31 +669,56 @@ def odds(H, ev, score, now):
     starts, inside = ev['crisis']
     sev_inside = {m for a, b, _ in CRISES if a in SEVERE for m in span(a, b)}
     rec_starts, rec_inside = ev['recession']
-    bear_starts, _ = ev['bear']
+    bear_starts, bear_inside = ev['bear']
     tests = {  # horizon, months already in the event, its start months
         'crisis_12m': (12, inside, starts),
         'crisis_24m': (24, inside, starts),
         'severe_24m': (24, sev_inside, SEVERE),
         'recession_24m': (24, rec_inside, rec_starts),
-        'bear_24m': (24, set(), bear_starts),
+        'bear_24m': (24, bear_inside, bear_starts),
     }
     out = {}
     for key, (h, ins, st) in tests.items():
-        hit = lambda m: any(m < x <= shift(m, h) for x in st)
         known = [m for m in H if m <= shift(now, -h) and m not in ins]
-        w = {m: math.exp(-0.5 * ((H[m] - score) / 5) ** 2) for m in known}
+        hit = {m: any(m < x <= shift(m, h) for x in st) for m in known}
+        wt = lambda s: {m: math.exp(-0.5 * ((H[m] - s) / 5) ** 2) for m in known}
+        like = lambda w: 100 * sum(w[m] for m in known if hit[m]) / sum(w.values())
+        w = wt(score)
         sw = sum(w.values())
-        out[key] = dict(like=round(100 * sum(w[m] for m in known if hit(m)) / sw) if sw > 1e-9 else None,
-                        months=round(sw * sw / sum(v * v for v in w.values())) if sw > 1e-9 else 0,
-                        base=round(100 * sum(map(hit, known)) / len(known)))
-    near = lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)  # what the bands measure
+        base = round(100 * sum(hit.values()) / len(known))
+        if sw <= 1e-9:
+            out[key] = dict(like=None, months=0, base=base)
+            continue
+        card = dict(like=round(like(w)), months=round(sw * sw / sum(v * v for v in w.values())), base=base,
+                    per_point=round((like(wt(score + 1)) - like(wt(score - 1))) / 2, 1))  # how fast the card moves per point of score
+        if key == 'crisis_24m':  # the evidence behind the headline card: which crises carry it, and how wide it is
+            by = {}
+            for m in known:
+                if hit[m]:
+                    x = next(x for x in st if m < x <= shift(m, h))
+                    by[x] = by.get(x, 0) + w[m]
+            card['drivers'] = [[x, round(100 * v / sw)] for x, v in sorted(by.items(), key=lambda kv: -kv[1])[:3]]
+            years = {}
+            for m in known:
+                years.setdefault(m[:4], []).append(m)
+            ys, rnd, draws = sorted(years), random.Random(0), []  # years resampled with replacement: 1,000 draws, 5th–95th percentile
+            for _ in range(1000):
+                pick = [m for _ in ys for m in years[rnd.choice(ys)]]
+                den = sum(w[m] for m in pick)
+                if den > 1e-9:
+                    draws.append(100 * sum(w[m] for m in pick if hit[m]) / den)
+            draws.sort()
+            card['range'] = [round(draws[len(draws) // 20]), round(draws[-(len(draws) // 20) - 1])]
+        out[key] = card
+    near = lambda m, h: m in inside or any(m < x <= shift(m, h) for x in starts)  # what the bands measure: in a crisis or near one
     bins = []
     for lo in range(30, 85, 5):
-        known = [m for m in H if lo <= H[m] < lo + 5 and m <= shift(now, -24)]
-        if known:
-            bins.append(dict(lo=lo, months=len(known),
-                             crisis_12m=round(100 * sum(near(m, 12) for m in known) / len(known)),
-                             crisis_24m=round(100 * sum(near(m, 24) for m in known) / len(known))))
+        b = dict(lo=lo)
+        for h in (12, 24):  # each horizon over the months whose outcome is known for it
+            known = [m for m in H if lo <= H[m] < lo + 5 and m <= shift(now, -h)]
+            b[f'n{h}'], b[f'hit{h}'] = len(known), sum(near(m, h) for m in known)
+        if b['n24']:
+            bins.append(dict(b, months=b['n24'], crisis_12m=round(100 * b['hit12'] / b['n12']), crisis_24m=round(100 * b['hit24'] / b['n24'])))
     out['bins'] = bins
     return out
 
@@ -704,8 +750,15 @@ def report(db, SERIES):
     od = odds(H, ev, score, now)
     ld = leads(db, P, months, ev, now)
 
-    # how unusual is today's structural reading?
+    # how unusual is today's structural reading, and today's market stress against the stress pillar's own history?
     s_rank = dict(max=round(max(S.values()), 1), max_month=max(S, key=S.get), pct=round(100 * pct(sorted(S.values()), structural)))
+    st_rank = dict(pct=round(100 * pct(sorted(P['stress'].values()), pscore['stress'])))
+    rec_spans = []  # NBER recessions as [first month, last month]
+    for m in sorted(ev['recession'][1]):
+        if rec_spans and rec_spans[-1][1] == shift(m, -1):
+            rec_spans[-1][1] = m
+        else:
+            rec_spans.append([m, m])
     starts, inside = ev['stagflation']
     stag_near = lambda m: m in inside or any(m < x <= shift(m, 12) for x in starts)
     stag_test = [m for m in hm if m <= shift(now, -12)]
@@ -740,12 +793,11 @@ def report(db, SERIES):
     names = dict(spread='10-year minus 3-month Treasury yield', inv18='Lowest 10y−3m spread in the last 18 months',
                  nfci='Financial conditions (Chicago Fed NFCI)', nfci_chg6='NFCI change over 6 months',
                  ebp='Excess bond premium (Fed)')
-    r1 = lambda d: {m: round(v, 1) for m, v in d.items()}
     return dict(
         updated=datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         version=VERSION,
         score=round(score, 1), acute=round(acute, 1), structural=round(structural, 1), stagflation=round(stagf, 1),
-        structural_rank=s_rank,
+        structural_rank=s_rank, stress_rank=st_rank,
         odds=od,
         leads=ld,
         themes={p: list(t) for p, t in THEMES.items()},
@@ -753,8 +805,10 @@ def report(db, SERIES):
         bands=[dict(at=b[0], key=b[1], answer=b[2], label=b[3]) for b in BANDS],
         pillars={p: round(100 * v, 1) for p, v in pscore.items()},
         weights=WEIGHTS,
+        # date: the observation behind the value (a carried-forward quarter keeps its own date, not the month it's used in)
         components=[dict(key=k, label=c['label'], pillar=c['pillar'], value=round(c['now'][1], 4), shown=shown(c, real80),
-                         date=c['now'][0][:10], pct=round(100 * c['pct']), series=c['series']) for k, c in C.items()],
+                         date=(c['obs'] or min(c['now'][0][:10], lastd.get(c['series']) or '9999'))[:10], pct=round(100 * c['pct']),
+                         series=c['series']) for k, c in C.items()],
         flags=dict(high=flags, low=calm),
         unusual=unusual(db, C, lambda c: shown(c, real80), gaps),
         pairs=gaps,
@@ -773,7 +827,7 @@ def report(db, SERIES):
                      structural=[round(S[m], 1) for m in hm], stagflation=[round(SI[m], 1) for m in hm],
                      **{p: [round(100 * P[p][m], 1) for m in hm] for p in WEIGHTS},
                      recession_risk=[round(100 * F['history'][m], 1) if m in F['history'] else None for m in hm]),
-        events=dict(recessions=ev['recession'][0], bear_markets=ev['bear'][0], stagflation=ev['stagflation'][0]),
+        events=dict(recessions=ev['recession'][0], recession_spans=rec_spans, bear_markets=ev['bear'][0], stagflation=ev['stagflation'][0]),
         backtest=bt,
         cases=cases,
         markets=mk,
@@ -896,8 +950,10 @@ def sustain(db):
     r_avg, r_new = q('DEBT_AVG_RATE')[1], q('DGS10')[1]
     year = int(debt_d[:4])
     scen = []
-    for key, label, g, rn in (('inflation', 'Inflation keeps doing the work', 6.0, r_new - 0.6), ('normal', 'Back to normal growth', 4.0, r_new - 0.6),
-                              ('market', 'Today’s market rates stay', 4.0, r_new), ('slowdown', 'Slower growth', 3.0, r_new)):
+    SCEN = (('inflation', 'Inflation keeps doing the work', 6.0, r_new - 0.6), ('normal', 'Back to normal growth', 4.0, r_new - 0.6),
+            ('market', 'Today’s market rates stay', 4.0, r_new), ('slowdown', 'Slower growth', 3.0, r_new))
+    g_n, r_n = next((g, rn) for k, _, g, rn in SCEN if k == 'normal')
+    for key, label, g, rn in SCEN:
         path = debt_path(d, r_avg, g, primary, rev, rn)
         cross = next((year + k for k, _, sh in path if sh >= 0.30), None)
         at = lambda k: dict(year=year + k, debt=round(path[k - 1][1]), interest_share=round(100 * path[k - 1][2]))
@@ -916,9 +972,9 @@ def sustain(db):
     debt_then = value_at(db, 'DEBT_PUBLIC', off['peak_date'] + '-28') if off else None
     cofer = {c: rows(db, f'COFER_{c}') for c in ('USD', 'EUR', 'CNY')}
     gold = monthly(db, 'CB_GOLD_WORLD')
-    g_last = max(gold) if gold else None
+    gold_last = max(gold) if gold else None
     t = lambda v: v * OZ_T  # million oz → tonnes
-    yearly = [(y, round(t(gold[f'{y}-12'] - gold[f'{y - 1}-12']))) for y in range(2005, int(g_last[:4])) if f'{y}-12' in gold and f'{y - 1}-12' in gold] if gold else []
+    yearly = [(y, round(t(gold[f'{y}-12'] - gold[f'{y - 1}-12']))) for y in range(2005, int(gold_last[:4])) if f'{y}-12' in gold and f'{y - 1}-12' in gold] if gold else []
     m2 = monthly(db, 'M2')
     iss = monthly(db, 'NET_ISSUANCE')
     iss_pct = {m: 100 * v / 1000 / gdp[m] for m, v in iss.items() if m in gdp}
@@ -927,20 +983,23 @@ def sustain(db):
     defence = 100 * mil_us[my_] / 1e9 / gdp_weo[my_] if my_ else None  # SIPRI's military spending, % of GDP
     off_d, off_v = (tic['OFFICIAL'][-1] if tic['OFFICIAL'] else (None, None))
     off_yago = value_at(db, 'TIC_OFFICIAL', days_before(off_d, 365)) if off_d else None
-    y10_yago = value_at(db, 'DGS10', days_before(latest(db, 'DGS10')[0], 365))
+    # the yield over the same twelve months as the holdings (TIC reports end-of-month positions, at market value)
+    eom = days_before(shift(off_d[:7], 1) + '-01', 1) if off_d else None
+    y10_at, y10_yago = (value_at(db, 'DGS10', eom), value_at(db, 'DGS10', days_before(eom, 365))) if eom else (None, None)
     usd = cofer['USD'][-1][1] if cofer['USD'] else None
     exp = latest(db, 'INFL_5Y5Y')
     # the lines that would mean the turn is under way: what the decline thesis predicts, tracked live (not a forecast)
     watch = [
-        dict(key='interest', label='Interest takes 30% of federal revenue', now=f'{100 * interest / rev:.0f}%', crossed=interest / rev >= .30),
+        dict(key='interest', label='Net interest takes 30% of federal revenue (fiscal year)', now=f'{100 * interest / rev:.0f}%', crossed=interest / rev >= .30),
         dict(key='ferguson', label='Interest costs more than defence (Ferguson’s law)', crossed=bool(defence and interest > defence),
              now=f'interest {interest:.1f}% of GDP, defence {defence:.1f}%' if defence else '—'),
-        dict(key='lenders', label='Foreign central banks sell while long rates rise', crossed=bool(off_yago and off_v < off_yago and r_new > (y10_yago or 99)),
-             now=f"{100 * (off_v / off_yago - 1):+.0f}% in a year, 10-year yield {r_new - y10_yago:+.1f} pp" if off_yago and y10_yago else '—'),
+        dict(key='lenders', label='Foreign central banks sell Treasuries while long rates rise (holdings at market value)',
+             crossed=bool(off_yago and y10_yago and off_v < off_yago and y10_at > y10_yago),
+             now=f"{100 * (off_v / off_yago - 1):+.0f}% in a year, 10-year yield {y10_at - y10_yago:+.1f} pp over the same year" if off_yago and y10_yago else '—'),
         dict(key='expectations', label='Markets expect inflation above 3% for 5–10 years', now=f'{exp[1]:.2f}%', crossed=exp[1] > 3),
         dict(key='reserves', label='The dollar falls below half of world reserves', now=f'{usd:.1f}%' if usd else '—', crossed=bool(usd and usd < 50)),
-        dict(key='gold', label='Central banks keep adding gold (over 300 t a year)', crossed=bool(gold) and t(gold[g_last] - gold.get(shift(g_last, -12), gold[g_last])) > 300,
-             now=f"{t(gold[g_last] - gold.get(shift(g_last, -12), gold[g_last])):+.0f} t in 12 months" if gold else '—'),
+        dict(key='gold', label='Central banks keep adding gold (over 300 t a year)', crossed=bool(gold) and t(gold[gold_last] - gold.get(shift(gold_last, -12), gold[gold_last])) > 300,
+             now=f"{t(gold[gold_last] - gold.get(shift(gold_last, -12), gold[gold_last])):+.0f} t in 12 months" if gold else '—'),
     ]
     # the balance of power: shares of world output and of military spending (this year's output figures are IMF estimates)
     A = lambda k: {d[:4]: x for d, x in rows(db, k)}
@@ -968,14 +1027,16 @@ def sustain(db):
         debt=round(d, 1), debt_date=debt_d[:7], deficit=round(-deficit, 1), interest=round(interest, 1), primary=round(primary, 1),
         revenue=round(rev, 1), fiscal_year=fy[:4], interest_share=round(100 * interest / rev), avg_rate=r_avg, new_rate=r_new,
         growth=round(nom_g, 1), growth_date=g_last, inflation=round(infl, 1),
-        stabilising=round(-d * (r_avg - nom_g) / (100 + nom_g), 1),  # the primary deficit that holds debt/GDP steady today
-        stabilising_normal=round(-d * (r_new - 0.6 - 4.0) / 104, 1),
-        inflation_erosion=round(d * infl / 100, 1), scenarios=scen,
+        stabilising=round(-d * (r_avg - nom_g) / (100 + nom_g), 1),  # the primary deficit that holds debt/GDP steady today...
+        stabilising_market=round(-d * (r_new - nom_g) / (100 + nom_g), 1),  # ...once the debt pays what new borrowing costs
+        stabilising_normal=round(-d * (r_n - g_n) / (100 + g_n), 1),  # ...in the 'back to normal' case
+        inflation_erosion=round(d * infl / 100, 1), liquidation=round(d * (infl - r_avg) / 100, 1),  # gross, and net of what the debt pays
+        scenarios=scen,
         holders={k: holder(k) for k in tic}, foreign_share=round(share_at(max(r[0] for r in tic['TOTAL'])), 1) if tic['TOTAL'] else None,
         foreign_share_2008=round(share_at('2008-12-31'), 1) if tic['TOTAL'] else None, foreign_share_2013=round(share_at('2013-12-31'), 1) if tic['TOTAL'] else None,
         debt_growth_since_official_peak=round(100 * (debt_v / debt_then - 1)) if debt_then else None,
         reserves={c: dict(now=r[-1][1], date=r[-1][0][:7], first=r[0][1], first_date=r[0][0][:7], peak=max(x[1] for x in r)) for c, r in cofer.items() if r},
-        gold=dict(tonnes=round(t(gold[g_last])), date=g_last, change_12m=round(t(gold[g_last] - gold.get(shift(g_last, -12), gold[g_last]))),
+        gold=dict(tonnes=round(t(gold[gold_last])), date=gold_last, change_12m=round(t(gold[gold_last] - gold.get(shift(gold_last, -12), gold[gold_last]))),
                   yearly=yearly) if gold else None,
         since_1971=dict(prices=round(cpi[max(cpi)] / cpi['1971-08'], 1), money=round(m2[max(m2)] / m2['1971-08'], 1)) if m2 else None,
         issuance=dict(now=round(iss_pct[max(iss_pct)], 1), date=max(iss_pct), since=max([m for m in iss_pct if m < max(iss_pct) and iss_pct[m] >= iss_pct[max(iss_pct)]], default=None),
@@ -1008,8 +1069,8 @@ def oil(db):
 
 def niip_history(db):
     """US net foreign debt (−NIIP) as % of GDP: annual from 1976, quarterly from 2006."""
-    gdp = monthly(db, 'GDP')
-    pts = {d[:7]: v for d, v in rows(db, 'NIIP_A')}
+    # FRED dates the annual end-of-year position at 1 January: place it in the fourth quarter, as the quarterly series does
+    pts = {f'{d[:4]}-10': v for d, v in rows(db, 'NIIP_A')}
     pts.update({d[:7]: v for d, v in rows(db, 'NIIP')})
     out = []
     for m in sorted(pts):
@@ -1030,7 +1091,8 @@ def markets(db):
         if r:
             venues.append(dict(key=key, name=name, kind=kind, price=round(r[1], 2), at=r[0]))
     live = sorted(v['price'] for v in venues if v['kind'] == 'token')
-    spot = live[len(live) // 2] if live else gold  # median of the live venues
+    median = lambda s: (s[(len(s) - 1) // 2] + s[len(s) // 2]) / 2
+    spot = median(live) if live else gold  # median of the live venues
 
     fx, d = [], latest(db, 'EUR_USD')[0]
     yago = days_before(d, 365)
@@ -1070,7 +1132,7 @@ def markets(db):
     y = lambda k: latest(db, k)[1]
     # the ticker's change over the last day: % for prices, points for rates; None until there's a day of history
     tokens = sorted(x for v in venues if v['kind'] == 'token' and (x := ago(db, v['key'])))
-    spot0 = tokens[len(tokens) // 2] if tokens else None  # the same median of the live venues as the price shown
+    spot0 = median(tokens) if tokens else None  # the same median of the live venues as the price shown
     btc0, gold0, silver0 = ago(db, 'V_KRAKEN_BTC' if latest(db, 'V_KRAKEN_BTC') else 'BTC'), ago(db, 'GOLD'), ago(db, 'SILVER')
     rel = lambda a, b: round(100 * (a / b - 1), 2) if a and b else None
     dif = lambda k: round(y(k) - ago(db, k), 2) if ago(db, k) is not None else None
@@ -1080,7 +1142,7 @@ def markets(db):
                us_debt=rel(v1, ago(db, 'DEBT')), us10=dif('DGS10'), us2=dif('DGS2'), us10_real=dif('DFII10'), fed=dif('DFF'))
     return dict(
         gold=dict(price=round(spot, 2), reference=round(gold, 2), reference_date=gold_d, change_1y=change(db, 'GOLD', 365),
-                  real_vs_1980=round((spot / cpi_now) / (gm['1980-01'] / cpi['1980-01']) - 1, 3),
+                  real_vs_1980=round((gold / cpi_now) / (gm['1980-01'] / cpi['1980-01']) - 1, 3),  # the same reference price and base as the score's input
                   silver=round(silver[1], 2), gold_silver=round(gold / silver[1], 1)),
         venues=venues,
         spread=dict(usd=round(live[-1] - live[0], 2), pct=round(100 * (live[-1] / live[0] - 1), 3)) if len(live) > 1 else None,
@@ -1258,12 +1320,12 @@ def why_gold(db):
     debt_vs_gold = [[m, v, real_by_m.get(m)] for m, v in debt if m in real_by_m]
 
     cagr = lambda a, b, yrs: 100 * ((b / a) ** (1 / yrs) - 1)
-    yrs = (int(months[-1][:4]) - 1971) + (int(months[-1][5:]) - 8) / 12
-    g = gold[months[-1]]
+    yrs = lambda m: (int(m[:4]) - 1971) + (int(m[5:]) - 8) / 12  # each series to its own last month: gold can run a month ahead of the CPI
+    g, mc = gold[months[-1]], max(m for m in months if m in cpi)
     stats = dict(
-        gold_cagr_71=r1(cagr(gold[base], g, yrs), 1), cpi_cagr_71=r1(cagr(cpi[base], cpi[months[-1]], yrs), 1),
-        m2_cagr_71=r1(cagr(m2[base], m2[max(m2)], yrs), 1), gold_x_71=r1(g / gold[base], 1),
-        cpi_x_71=r1(cpi[months[-1]] / cpi[base], 1), m2_x_71=r1(m2[max(m2)] / m2[base], 1),
+        gold_cagr_71=r1(cagr(gold[base], g, yrs(months[-1])), 1), cpi_cagr_71=r1(cagr(cpi[base], cpi[mc], yrs(mc)), 1),
+        m2_cagr_71=r1(cagr(m2[base], m2[max(m2)], yrs(max(m2))), 1), gold_x_71=r1(g / gold[base], 1),
+        cpi_x_71=r1(cpi[mc] / cpi[base], 1), m2_x_71=r1(m2[max(m2)] / m2[base], 1),
         real_peak=max(real, key=lambda x: x[1]), dd_now=dd[-1][1], dd_worst=min(dd, key=lambda x: x[1]),
         hours_now=hours[-1], hours_low=min(hours, key=lambda x: x[1]), hours_high=max(hours, key=lambda x: x[1]),
         dollar_1913=dollar[-1], gold_now=round(g_now, 2), gold_date=gd,

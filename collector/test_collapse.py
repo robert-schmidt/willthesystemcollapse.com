@@ -26,15 +26,20 @@ odd = dict(like=20, base=20)
 r = dict(score=30, band=dict(label='Normal', answer='NO'), pillars=dict(stress=20), forecast=dict(probability=5), structural=30,
          structural_rank=dict(pct=25), flags=dict(high=[]), odds=dict(crisis_24m=odd, recession_24m=odd, bear_24m=odd, severe_24m=odd))
 assert 'foundations are solid' in collect.summary(r) and 'no red flags' in collect.summary(r), collect.summary(r)
-# ...and it answers the main question first: debt held steady by growth, interest at 30% of revenue within 15 years
-r['sustain'] = dict(primary=2.6, stabilising=2.6, growth=6.3, debt=97.4, debt_date='2026-04', scenarios=[dict(key='normal', cross30=2035)])
-assert collect.summary(r).startswith('Sustainable? Not on current settings: US federal debt is 97% of GDP and holds steady only while'), collect.summary(r)
+# ...and it answers the main question first: steady only on today's growth and cheap old debt; a 2.1-point gap is "rising"
+r['sustain'] = dict(primary=2.6, stabilising=2.6, stabilising_market=1.1, stabilising_normal=-0.5, growth=6.3, debt=97.4, avg_rate=3.5,
+                    new_rate=4.1, scenarios=[dict(key='normal', cross30=2035), dict(key='market', cross30=2032)])
+t = collect.summary(r)
+assert t.startswith('Sustainable? Only while the economy keeps growing about 6.3% a year in dollars and the old cheap debt lasts: US federal debt held by the public is 97% of GDP'), t
+assert 'between 2032 and 2035' in t and 'a 0.5% surplus' in t and t.index('Sustainable?') < t.index('Breaking now? No: score 30/100 (normal)') < t.index('Within two years?'), t
 r['sustain'].update(stabilising=0.5)
-assert 'is rising by about 2.1% of GDP a year' in collect.summary(r), collect.summary(r)
+assert 'Sustainable? Not on current settings: the debt is rising by about 2.1% of GDP a year' in collect.summary(r), collect.summary(r)
+r.update(score=48.2, bands=[dict(at=0), dict(at=40), dict(at=50)])
+assert '(normal, 1.8 points below the 50 line)' in collect.summary(r), collect.summary(r)
 # unusual: a level not seen in 20+ years is flagged, a recent dip from a fresh record still counts, a gap is passed through
 db = collect.connect(':memory:')
 C = {'old': dict(label='A', now=('2026-10-01', 5.0), hist={'1990-01': 6.0, '2000-01': 4.0, '2026-09': 4.5}),
-     'dip': dict(label='B', now=('2026-10-01', 9.0), hist={'1990-01': 6.0, '2026-02': 9.5}),
+     'dip': dict(label='B', now=('2026-10-01', 9.2), hist={'1990-01': 6.0, '2026-02': 9.5}),
      'meh': dict(label='C', now=('2026-10-01', 5.0), hist={'2015-01': 6.0})}
 gap = dict(key='g', label='G', unit='pp', value=2.0, date='2026-10-01', since='1997', usual=[0.1, 0.4], unusual=True)
 u = {x['key']: x['note'] for x in score.unusual(db, C, lambda c: '', [gap])}
@@ -48,11 +53,16 @@ assert abs(y['1950-01'] - 5) < 1e-9 and abs(combo[max(combo)] - 5) < 1e-6, (y['1
 # odds: months already inside a crisis don't count, so a calm month's odds mean "one starts", like the recession card
 ms = score.span('1990-01', '1999-12')
 ev = dict(crisis=(['1995-01'], set(score.span('1995-01', '1995-06'))), recession=([], set()), bear=([], set()))
+card = lambda o: {k: o['crisis_12m'][k] for k in ('like', 'months', 'base')}
 o = score.odds({m: 50.0 for m in ms}, ev, 50.0, '1999-12')
-assert o['crisis_12m'] == dict(like=12, months=102, base=12), o['crisis_12m']
+assert card(o) == dict(like=12, months=102, base=12), o['crisis_12m']
 # ...and months scoring far from today carry no weight: the 12 before the crisis scored 90, so a 50 saw none follow
 o = score.odds({m: 90.0 if '1994' <= m < '1995' else 50.0 for m in ms}, ev, 50.0, '1999-12')
-assert o['crisis_12m'] == dict(like=0, months=90, base=12), o['crisis_12m']
+assert card(o) == dict(like=0, months=90, base=12), o['crisis_12m']
+# a month already 20% below its stock-market peak is inside the fall, not one with no fall ahead
+ev = dict(crisis=([], set()), recession=([], set()), bear=(['1995-01'], set(score.span('1995-01', '1995-12'))))
+b = score.odds({m: 50.0 for m in ms}, ev, 50.0, '1999-12')['bear_24m']
+assert (b['like'], b['months']) == (29, 84), b  # 24 of the 84 months not inside the fall (96 known, 12 inside) came within two years of it
 # the ticker's change: the previous day's value for daily data, nothing without history
 db.executemany('INSERT INTO obs VALUES (?,?,?)', [('D', '2026-10-16', 1.0), ('D', '2026-10-19', 2.0)])
 assert score.ago(db, 'D') == 1.0 and score.ago(db, 'none') is None

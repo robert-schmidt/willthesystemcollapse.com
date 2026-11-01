@@ -199,7 +199,7 @@ def shfe_gold(_, have):
     """Shanghai Futures Exchange daily settlement of the most-traded gold contract, CNY per gram. One file per trading day
     (404 on holidays). SHFE allows non-commercial use: only the derived premium is published, never the prices.
     The first run samples one day a week back to 2013, then every trading day."""
-    day = date.fromisoformat(have[:10]) + timedelta(days=1) if have else date(2013, 1, 2)
+    day = date.fromisoformat(have[:10]) if have else date(2013, 1, 2)  # from the last stored day: a run with nothing new still returns a row
     out = []
     while day < date.today() + timedelta(days=1):
         if day.weekday() < 5 and (have or day.weekday() == 2 or day > date.today() - timedelta(days=14)):
@@ -398,10 +398,11 @@ def tic_tables():
             if r[0] == 'Country':
                 if any(re.fullmatch(r'\d{4}-\d{2}', x) for x in r):  # table 5: 2026-08
                     months = [f'{x}-01' for x in r[1:] if re.fullmatch(r'\d{4}-\d{2}', x)]
-                else:  # history: months on the row above, years on this one
+                else:  # history: months on the row above, years on this one. 2002–11 list June twice (the annual survey's
+                    # benchmark: the first is on the later basis) and no January; the first column of a month wins
                     months = [f'{int(y):04d}-{MON[m]:02d}-01' for m, y in zip([x for x in rows[i - 1][1:] if x in MON], [x for x in r[1:] if x.isdigit()])]
             elif months and r[0]:
-                for d, x in zip(months, r[1:]):
+                for d, x in reversed(list(zip(months, r[1:]))):
                     if num(x) is not None:
                         out.setdefault(r[0], {})[d] = num(x)
     return out
@@ -701,30 +702,49 @@ def refresh(db, only=None, force=False):
 
 
 def summary(r):
-    """The hero's one-paragraph reading of a report."""
+    """The hero's one-paragraph reading of a report: three questions, each answered from one computation and compared only
+    with its own average: can this last (sustain()), is it breaking now (the band and pillars), what followed months like
+    this one (the odds cards, which exclude months already in a crisis)."""
     p, sr, od, high = r['pillars'], r['structural_rank'], r['odds'], r['flags']['high']
-    mood = 'calm' if p['stress'] < 40 else 'uneasy' if p['stress'] < 70 else 'in distress'
+    st = (r.get('stress_rank') or {}).get('pct', 50)  # today's market stress against the stress pillar's own history
+    mood = 'calm' if st < 20 else 'about as usual' if st < 80 else 'in distress'
     base = 'weak' if sr['pct'] >= 70 else 'middling' if sr['pct'] >= 40 else 'solid'
     flags = (f"{len(high)} red flag{'s' * (len(high) != 1)} led by “{high[0]['label']}” at {high[0]['shown']}"
              if high else 'no red flags')
-    above = [k for k in ('crisis_24m', 'recession_24m', 'bear_24m') if od[k]['like'] is not None and od[k]['like'] - od[k]['base'] >= 10]
     c, s = od['crisis_24m'], od['severe_24m']
-    horizon = ('Over two years the odds are about average.' if c['like'] is None else
-               f"Over two years the odds are {'above' if above else 'close to'} average: {c['like']}% of months like this saw a "
-               f"crisis start within 24 months (average {c['base']}%), mostly milder ones; {s['like']}% a severe one (average {s['base']}%).")
+    n_crises = len((r.get('backtest') or {}).get('crises', [])) or 13
+    if c['like'] is None:
+        horizon = 'Within two years? Too few months scored like this one to say.'
+    else:
+        diff = c['like'] - c['base']  # the cards' own rule: ±10 points is above or below
+        word = 'Above the average month' if diff >= 10 else 'Below the average month' if diff <= -10 else 'About the average month'
+        kind = 'most of them milder than 2008' if s['like'] is not None and 2 * s['like'] <= c['like'] else 'most of them severe'
+        slope = f" Around here each point on the score moves those odds by about {c['per_point']:.0f}." if c.get('per_point', 0) >= 3 else ''
+        horizon = (f"Within two years? {word}: {c['like']}% of months scoring near {r['score']:.0f}, with no crisis under way, saw one of the "
+                   f"{n_crises} crises since 1973 start within 24 months (any such month: {c['base']}%), {kind}; {s['like']}% a severe one "
+                   f"(average {s['base']}%).{slope}")
     s = r.get('sustain')
     lasting = ''
     if s:  # the main question first: can this go on?
-        normal = next((x for x in s['scenarios'] if x['key'] == 'normal'), None)
-        gap = s['primary'] - s['stabilising']
-        trend = (f"holds steady only while the economy grows {s['growth']:.0f}% a year in dollars, much of it inflation" if gap <= 0.3 else
-                 f"is rising by about {gap:.1f}% of GDP a year")
-        when = f"; at normal growth, interest would take 30% of federal revenue by {normal['cross30']}" if normal and normal['cross30'] else ''
-        verdict = 'Not on current settings' if normal and normal['cross30'] and normal['cross30'] - int(s['debt_date'][:4]) <= 15 else 'For now'
-        lasting = f"Sustainable? {verdict}: US federal debt is {s['debt']:.0f}% of GDP and {trend}{when}. "
+        gap, gap_mkt = s['primary'] - s['stabilising'], s['primary'] - s.get('stabilising_market', s['stabilising'])
+        years = [x['cross30'] for x in s['scenarios'] if x['cross30']]
+        normal = next((x['cross30'] for x in s['scenarios'] if x['key'] == 'normal'), None)
+        verdict = (f"Not on current settings: the debt is rising by about {gap:.1f}% of GDP a year" if gap > 0.3 else
+                   f"Only while the economy keeps growing about {s['growth']:.1f}% a year in dollars and the old cheap debt lasts" if gap_mkt > 0.3
+                   else 'For now')
+        steady = ('just holds it steady' if gap <= 0.3 else f"is {gap:.1f} points more than would hold it steady")
+        sn = s['stabilising_normal']
+        need = f"a {-sn:.1f}% surplus" if sn < 0 else f"no more than a {sn:.1f}% deficit"
+        when = (f" Interest would take 30% of federal revenue between {min(years)} and {max(years)} depending on growth and rates"
+                f"{f' ({normal} at 4% growth)' if normal else ''}." if years else '')
+        lasting = (f"Sustainable? {verdict}: US federal debt held by the public is {s['debt']:.0f}% of GDP; the deficit before interest "
+                   f"({s['primary']:.1f}% of GDP) {steady} at the {s['avg_rate']:.1f}% the Treasury pays on average, but new debt costs "
+                   f"{s['new_rate']:.1f}%, and at 4% growth holding it steady would take {need}.{when} ")
     now = {'NO': 'No', 'NOT YET': 'Not yet', 'WOBBLING': 'Wobbling', 'YES': 'Yes'}.get(r['band']['answer'], r['band']['answer'].capitalize())
-    return (f"{lasting}Breaking now? {now}: score {r['score']:.0f}/100 ({r['band']['label'].lower()}), markets are {mood} (stress {p['stress']:.0f}) and "
-            f"recession risk over the next 12 months is {r['forecast']['probability']:.0f}%. The foundations are {base}: "
+    nxt = next((b['at'] for b in r.get('bands', []) if b['at'] > r['score']), None)
+    edge = f", {nxt - r['score']:.1f} points below the {nxt} line" if nxt and nxt - r['score'] < 3 else ''
+    return (f"{lasting}Breaking now? {now}: score {r['score']:.0f}/100 ({r['band']['label'].lower()}{edge}), market stress is {mood} "
+            f"(stress {p['stress']:.0f}) and recession risk over the next 12 months is {r['forecast']['probability']:.0f}%. The foundations are {base}: "
             f"structural risk is {r['structural']:.0f}/100, higher than in {sr['pct']}% of months since 1973, with {flags}. {horizon}")
 
 
@@ -755,6 +775,7 @@ def snapshot(page, r):
     at = datetime.fromisoformat(r['updated'].replace('Z', '+00:00'))
     html = fill(html, 'answer', answer, {'data-band': r['band']['key'], 'style': f'--len:{len(answer)}'})
     html = fill(html, 'summary', r.get('summary') or summary(r))
+    html = fill(html, 'n-series', str(len(r['sources'])))
     html = fill(html, 'score', f"{r['score']:.1f}")
     html = fill(html, 'band-label', r['band']['label'])
     html = fill(html, 'pill-text', f"{r['score']:.0f} · {r['band']['label']}")

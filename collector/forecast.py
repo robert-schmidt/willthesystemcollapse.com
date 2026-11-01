@@ -61,7 +61,8 @@ def fit(X, y):
         if max(map(abs, step)) < 1e-9:
             break
     predict = lambda x: sigmoid(sum(a * b for a, b in zip(w, [1.0] + [(v - m) / s for v, m, s in zip(x, mu, sd)])))
-    return predict, [w[0]] + [b / s for b, s in zip(w[1:], sd)]  # weights per raw unit, for display
+    # weights per raw unit, for display: intercept + Σ weight × input reproduces the logit
+    return predict, [w[0] - sum(b / s * a for b, s, a in zip(w[1:], sd, mu))] + [b / s for b, s in zip(w[1:], sd)]
 
 
 def features(spread, nfci, ebp, months):
