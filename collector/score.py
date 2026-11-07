@@ -19,19 +19,20 @@ from itertools import groupby
 import forecast
 from datetime import datetime, timezone, date, timedelta
 
-VERSION = 8  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
+VERSION = 9  # v1 market stress; v2 + walk-forward recession model; v3 + inflation/money and fiscal/external pillars;
 # v4 + stock valuations and corporate leverage, forward-looking r − g, debt growth after inflation, history = live inputs;
 # v5 theme-balanced pillars, bands calibrated on historical odds; v6 + build-up pillar (credit boom, credit sentiment),
 # funding dislocations in stress, history placed at each series' publication date; v7 (the owner's call, under a no-harm rule)
 # + policy uncertainty in the news as a double-weight stress theme, and geopolitical calm (low risk = complacency) in build-up;
 # v8 the ten inputs that passed acceptance rule C (loan delinquencies, news tone, EU confidence, unrest; household credit growth,
-# low saving, calm news; household credit and debt payments)
+# low saving, calm news; household credit and debt payments); v9 margin loans at brokers (12-month growth as build-up, size
+# against GDP as private leverage) and payrolls falling as stress, each passed rule C (November 2026)
 WEIGHTS = {'stress': 2, 'warning': 1, 'money': 1, 'fiscal': 1, 'buildup': 1}
 # Quarterly and annual data enter the history when it was published, not at the quarter it describes (months after the
 # observation date): Z.1 financial accounts ~10 weeks after quarter end, GDP's advance estimate a month after, BIS ~6 months.
 # Monthly series sit at the month they describe, except SAVING (dated at publication, as the live 12-month low-saving reading
 # carries it; moving it changed no target, 2026-11).
-LAGS = {'EQUITY_MV': 5, 'CORP_DEBT': 5, 'HH_DEBT': 5, 'NIIP': 5, 'GDP': 3, 'DEBT_GDP': 3, 'INTEREST': 4, 'RECEIPTS': 4,
+LAGS = {'EQUITY_MV': 5, 'MARGIN': 5, 'CORP_DEBT': 5, 'HH_DEBT': 5, 'NIIP': 5, 'GDP': 3, 'DEBT_GDP': 3, 'INTEREST': 4, 'RECEIPTS': 4,
         'FED_DEBT_LEVEL': 3, 'DEFICIT_GDP': 9, 'BIS_CREDIT': 8, 'HH_CREDIT_BIS': 8, 'DELINQ_ALL': 6, 'DELINQ_MORTGAGE': 6, 'DSR': 6,
         'DSR_OLD': 6, 'SAVING': 2}
 # Bands calibrated on historical odds (v6 backtest, 1973–2026), sharper in v8: below 40, a crisis was under way or began
@@ -50,16 +51,16 @@ BANDS = [  # (from, key, answer, label)
 # measures, 4 financial-stress indices) can't outvote the others: pillar = mean of its themes.
 THEMES = {
     'stress': {'stress indices': ['nfci', 'ofr', 'stlfsi', 'ciss'], 'equity fear': ['vix', 'drawdown'], 'credit': ['credit', 'ebp'],
-               'jobs': ['unemp'], 'dislocations': ['cp_bill', 'vix_curve'], 'policy uncertainty': ['epu_us', 'epu_eu'],
+               'jobs': ['unemp', 'pay_3m'], 'dislocations': ['cp_bill', 'vix_curve'], 'policy uncertainty': ['epu_us', 'epu_eu'],
                'loan defaults': ['delinq_all', 'delinq_mortgage'], 'news and mood': ['news_tone', 'eu_mood', 'unrest_adv']},
     'money': {'consumer inflation': ['cpi', 'core_cpi', 'pce', 'sticky', 'median', 'trim_cpi', 'trim_pce', 'mct'], 'pipeline': ['ppi'],
               'momentum': ['accel'], 'expectations': ['exp10', 'exp5y5y'], 'money growth': ['m2'], 'dollar': ['usd_fall'],
               'gold': ['gold_mom']},
     'fiscal': {'government debt': ['debt_gdp', 'g7_debt'], 'deficit': ['deficit'], 'interest': ['interest', 'r_g'],
-               'debt growth': ['debt_growth'], 'external': ['niip'], 'private leverage': ['corp_debt'], 'valuation': ['valuation'],
+               'debt growth': ['debt_growth'], 'external': ['niip'], 'private leverage': ['corp_debt', 'margin_gdp'], 'valuation': ['valuation'],
                'trust in paper': ['real_gold'], 'bond market': ['bond_selloff'], 'household debt': ['hh_credit', 'dsr']},
     'buildup': {'credit boom': ['boom'], 'credit sentiment': ['sentiment'], 'geopolitical calm': ['geo_calm'],
-                'household credit boom': ['hh_credit_3y', 'save_low12'], 'calm news': ['news_calm']},
+                'household credit boom': ['hh_credit_3y', 'save_low12'], 'calm news': ['news_calm'], 'leverage boom': ['margin_12m']},
 }
 # v7: the most weight history allowed while crisis warning two years ahead stayed at least as good as v6 (×3 lost ground)
 THEME_WEIGHTS = {'policy uncertainty': 2}
@@ -347,6 +348,19 @@ def components(db):
         adj = sum(td[m] - fo[m] for m in lap) / len(lap)
         dsr = {**{m: v + adj for m, v in fo.items()}, **td}
         add('dsr', 'Household debt payments, % of income', 'fiscal', dsr, tail(dsr), 'DSR', 'pct')
+    # v9, each passed rule C (November 2026): margin loans at brokers (Z.1, from 1945; 1929, 2000 and 2007 were built on
+    # margin), their 12-month growth as build-up and their size against GDP as private leverage; payrolls falling as stress
+    mq = monthly(db, 'MARGIN')
+    if mq:
+        mgdp = over_gdp('MARGIN')
+        add('margin_gdp', 'Margin loans at brokers, % of GDP (Z.1)', 'fiscal', mgdp, tail(mgdp), 'MARGIN', 'ratio')
+        ml = {shift(m, LAGS['MARGIN']): v for m, v in mq.items()}
+        m12 = ffill({m: math.log(ml[m] / ml[shift(m, -12)]) for m in ml if shift(m, -12) in ml}, months, 4)
+        add('margin_12m', 'Margin loans at brokers, 12-month growth', 'buildup', m12, tail(m12), 'MARGIN', 'log')
+    pay = M('PAYROLLS')
+    p3 = {m: -math.log(pay[m] / pay[shift(m, -3)]) for m in pay if shift(m, -3) in pay}
+    if p3:
+        add('pay_3m', 'Payrolls, 3-month change (falling = stress)', 'stress', p3, tail(p3), 'PAYROLLS', 'neg_log')
 
     for c in C.values():  # carry each input's latest value forward (≤ 6 months), as the live reading does
         c['hist'] = ffill(c['hist'], months, 6)
@@ -512,7 +526,7 @@ def shown(c, real80):
             'ratio_pp': f'{100 * v:+.1f} pp', 'pct': f'{v:.1f}%', 'log': f'{100 * (math.exp(v) - 1):+.1f}%',
             'neg_ratio': f'{-100 * v:+.1f}%', 'real_gold': f'{100 * (v / real80 - 1):+.0f}% vs Jan 1980 average',
             'pp_gdp': f'{v:+.1f} pp', 'neg_pp': f'{-v:.2f} pp', 'x': f'{v:.2f}', 'neg_pts': f'{-v:.0f}', 'neg_idx': f'{-v:+.2f}',
-            'neg_pts1': f'{-v:+.1f}', 'neg_pct': f'{-v:.1f}%'}[u]
+            'neg_pts1': f'{-v:+.1f}', 'neg_pct': f'{-v:.1f}%', 'neg_log': f'{100 * (math.exp(-v) - 1):+.1f}%'}[u]
 
 
 def hyperinflation(db, C):

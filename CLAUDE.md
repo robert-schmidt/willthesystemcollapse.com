@@ -17,13 +17,13 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   The acceptance rule (rule C, adopted 2026-10-22; the baseline is always the live version). Stage 1, information: among months
   the score already rates alike (its quintiles), the candidate's stratified AUC on its pillar's own job (stress: a crisis
   under way; build-up, fiscal, money: a crisis starting within 24 months) beats the 99th percentile of random autocorrelated
-  series (v8: 0.687 and 0.718; v7 was 0.677 and 0.707; recalibrate when the score changes) and is ≥ 0.5 in 1973–99 and in 2000+.
+  series (v9: 0.733 stress, 0.731 the others; v8 was 0.687 and 0.718, v7 0.677 and 0.707; `collector/rulec.py` recalibrates them on the live score each run) and is ≥ 0.5 in 1973–99 and in 2000+.
   Stage 2, no harm: added at standard theme weight, no target (crisis under way, crisis 12/24, recession 12, severe 12, 20%
   fall 12 months ahead) down more than 0.02, and ≥ 70 still ≥ 90% near a crisis. Calibrated on placebos and synthetic
   signals only: 1–2.5% false alarms; accepts a strong new signal (own AUC 0.77–0.83) 13–19 times in 20. The old rule
   (crisis ahead-24 +0.03, CI > 0, gains in both eras) accepted 0 of 300 random series but also 0 of 20 such signals: a new
   theme carries ~1/24 of the score, so a whole-score AUC test only measures dilution. Run every candidate once, in the
-  pillar its meaning says, and report the expected chance passes (2% × tries). Scripts: that session's calib*.py, retest.py.
+  pillar its meaning says, and report the expected chance passes (2% × tries). Script: `collector/rulec.py` (define the candidate in CANDIDATES after `collect.py --only KEY`).
   v7 exception (the owner's call, 2026-10-20): policy uncertainty and geopolitical risk went in under a no-harm rule set before
   the test (crisis ahead-24 down ≤ 0.01 with its CI including 0; recession/severe ahead-12 down ≤ 0.02; ≥ 70 band ≥ 90%; no
   era down > 0.02). EPU's theme weight 2 is the most at which crisis ahead-24 stayed ≥ v6 (3 lost ground): don't raise it
@@ -45,6 +45,12 @@ CLAUDE.local.md (gitignored) for private notes, including the sister site.
   on five of six targets (crisis under way +0.016, severe +0.019, recession +0.011; 20% falls −0.008) in both eras.
   Reverse test: most money and fiscal themes add no crisis timing beyond the rest (stratified AUC 0.37–0.67). Unrest study (IMF RSUI × OECD, 46 countries, 1991–2025): strain didn't come before flare-ups (AUC 0.42–0.53);
   unrest came before weaker jobs and stocks only before 2008. All shown in the households panel, outside the score.
+  v9 round (2026-11-07, baseline v8, prompted by a viral call for a 1929-style crash in late October 2026): margin loans at brokers
+  (Z.1 BOGZ1FL663067003Q, from 1945) passed as 12-month growth (build-up, own theme) and as a share of GDP (fiscal, private
+  leverage); payrolls' 3-month fall passed (stress, jobs theme); 3 of 4 tries, 0.08 expected. Rejected: margin loans 3y Δ/GDP (0.709
+  vs 0.719). The call's other claims have no keyless series (private-credit stress, 401k hardship withdrawals, student-loan
+  defaults, index concentration), were already tested (auto and card delinquencies, UMich, Sahm, claims, oil shock) or aren't
+  data (lunar windows, elections, game releases). FINRA's monthly margin statistics are not a feed (its page says so): the Z.1 is the source.
 - **Data licences.** Keyless public sources only. FRED series tagged "pre-approval" (e.g. SP500, high-yield spreads) are
   not shown; SGE (Shanghai) is licence-only; Stooq is bot-walled. No scrapers that need X/Reddit logins or break ToS.
   EPU (policyuncertainty.com) and GPR/TPU (matteoiacoviello.com) are CC BY 4.0; the IMF unrest index, Richmond Fed partisan
@@ -65,10 +71,10 @@ Each component becomes a percentile vs its own monthly history (expanding window
 forward-filled ≤ 6 months so history matches the live reading; quarterly/annual series placed at their publication month,
 `LAGS` in score.py). Pillars are theme-balanced means (`THEME_WEIGHTS` for exceptions): stress (incl. CP − bill and
 VIX/VIX3M dislocations, US + Europe policy uncertainty in the news at double weight since v7, and since v8 loan
-delinquencies and the mood: news tone, EU confidence, unrest in the news), warning (the
-walk-forward recession model's percentile), money, fiscal (since v8 with household credit and debt payments), build-up
+delinquencies and the mood: news tone, EU confidence, unrest in the news; v9 payrolls' 3-month fall in the jobs theme), warning (the
+walk-forward recession model's percentile), money, fiscal (since v8 with household credit and debt payments; v9 margin loans/GDP as private leverage), build-up
 (BIS 3y Δ private credit/GDP, Baa−10y from 24 months earlier, geopolitical calm: minus the 12-month mean of Caldara–Iacoviello
-GPRH, as calm years came before crises; since v8 household credit 3y Δ with 12-month low saving, and calm news). `sustain()`
+GPRH, as calm years came before crises; since v8 household credit 3y Δ with 12-month low saving, and calm news; v9 margin-loan growth, 12 months). `sustain()`
 (outside the score) is the main question's arithmetic: debt path scenarios, the deficit that holds debt steady, inflation's
 erosion, who holds Treasuries (TIC), the dollar's reserve share (COFER), world central-bank gold, dilution since 1971; the
 summary opens with it.

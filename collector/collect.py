@@ -648,6 +648,9 @@ SERIES = {
     'DELINQ_MORTGAGE': (fred, 'DRSFRMACBS', M, 'Delinquency rate, residential mortgages', 'Federal Reserve via FRED'),
     'HH_CREDIT_BIS': (fred, 'QUSHAM770A', M, 'Credit to households, % of GDP', 'Bank for International Settlements via FRED'),
     'DSR_OLD': (fred, 'FODSP', W, 'Household financial obligations, % of income (to 2023)', 'Federal Reserve via FRED'),
+    # v9 (passed the acceptance rule in November 2026): margin loans at brokers (Z.1, from 1945), payrolls
+    'MARGIN': (fred, 'BOGZ1FL663067003Q', M, 'Margin loans: what brokers are owed by customers (Z.1)', 'Federal Reserve Z.1 via FRED'),
+    'PAYROLLS': (fred, 'PAYEMS', M, 'Nonfarm payrolls', 'BLS via FRED'),
     # how long can it go on: the federal arithmetic, who lends to the US, the dollar's place, dilution
     'DEBT_PUBLIC': (fred, 'FYGFDPUN', M, 'Federal debt held by the public', 'US Treasury via FRED'),
     'NET_INTEREST_GDP': (fred, 'FYOIGDA188S', W, 'Federal net interest, % of GDP (fiscal year)', 'OMB via FRED'),
