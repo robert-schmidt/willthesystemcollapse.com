@@ -75,7 +75,7 @@ delinquencies and the mood: news tone, EU confidence, unrest in the news; v9 pay
 walk-forward recession model's percentile), money, fiscal (since v8 with household credit and debt payments; v9 margin loans/GDP as private leverage), build-up
 (BIS 3y Δ private credit/GDP, Baa−10y from 24 months earlier, geopolitical calm: minus the 12-month mean of Caldara–Iacoviello
 GPRH, as calm years came before crises; since v8 household credit 3y Δ with 12-month low saving, and calm news; v9 margin-loan growth, 12 months). `sustain()`
-(outside the score) is the main question's arithmetic: debt path scenarios, the deficit that holds debt steady, inflation's
+(outside the score) is the main question's arithmetic: debt path scenarios (starting rate = fiscal-year net interest ÷ debt held by the public, new rate = 3-month mean 10y, since 2026-11-07), the deficit that holds debt steady, inflation's
 erosion, who holds Treasuries (TIC), the dollar's reserve share (COFER), world central-bank gold, dilution since 1971; the
 summary opens with it.
 Score = 100·(2·stress + warning + money + fiscal + buildup)/6; bands 0/40/50/60/70/75 were set where historical

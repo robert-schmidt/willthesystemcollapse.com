@@ -741,8 +741,8 @@ def summary(r):
         when = (f" Interest would take 30% of federal revenue between {min(years)} and {max(years)} depending on growth and rates"
                 f"{f' ({normal} at 4% growth)' if normal else ''}." if years else '')
         lasting = (f"Sustainable? {verdict}: US federal debt held by the public is {s['debt']:.0f}% of GDP; the deficit before interest "
-                   f"({s['primary']:.1f}% of GDP) {steady} at the {s['avg_rate']:.1f}% the Treasury pays on average, but new debt costs "
-                   f"{s['new_rate']:.1f}%, and at 4% growth holding it steady would take {need}.{when} ")
+                   f"({s['primary']:.1f}% of GDP) {steady} at the {s['avg_rate']:.1f}% the debt costs on average, but new debt costs "
+                   f"{s['new_rate']:.1f}% (10-year yield, 3-month average), and at 4% growth holding it steady would take {need}.{when} ")
     now = {'NO': 'No', 'NOT YET': 'Not yet', 'WOBBLING': 'Wobbling', 'YES': 'Yes'}.get(r['band']['answer'], r['band']['answer'].capitalize())
     nxt = next((b['at'] for b in r.get('bands', []) if b['at'] > r['score']), None)
     edge = f", {nxt - r['score']:.1f} points below the {nxt} line" if nxt and nxt - r['score'] < 3 else ''

@@ -961,7 +961,12 @@ def sustain(db):
     d = 100 * debt_v / 1000 / value_at(db, 'GDP', debt_d)  # $ millions over $ billions of GDP
     (fy, deficit), (_, interest), (_, rev) = q('DEFICIT_GDP'), q('NET_INTEREST_GDP'), q('RECEIPTS_GDP')
     primary = -deficit - interest  # FRED's balance is negative for a deficit
-    r_avg, r_new = q('DEBT_AVG_RATE')[1], q('DGS10')[1]
+    r_mkt = q('DEBT_AVG_RATE')[1]  # the average rate on marketable debt (shown for reference)
+    r_avg = 100 * interest / d  # what the debt costs today: the fiscal year's net interest over debt held by the public, so the
+    # path starts at the reported share of revenue and a bigger bill brings the crossing forward (November 2026)
+    y10 = rows(db, 'DGS10')
+    recent = [v for dd, v in y10 if dd > days_before(y10[-1][0], 91)]
+    r_new = sum(recent) / len(recent)  # 3-month average: one week's bond move shouldn't shift a 30-year path by years
     year = int(debt_d[:4])
     scen = []
     SCEN = (('inflation', 'Inflation keeps doing the work', 6.0, r_new - 0.6), ('normal', 'Back to normal growth', 4.0, r_new - 0.6),
@@ -1039,7 +1044,7 @@ def sustain(db):
         power=power,
         watch=watch,
         debt=round(d, 1), debt_date=debt_d[:7], deficit=round(-deficit, 1), interest=round(interest, 1), primary=round(primary, 1),
-        revenue=round(rev, 1), fiscal_year=fy[:4], interest_share=round(100 * interest / rev), avg_rate=r_avg, new_rate=r_new,
+        revenue=round(rev, 1), fiscal_year=fy[:4], interest_share=round(100 * interest / rev), avg_rate=round(r_avg, 2), market_rate=r_mkt, new_rate=round(r_new, 2),
         growth=round(nom_g, 1), growth_date=g_last, inflation=round(infl, 1),
         stabilising=round(-d * (r_avg - nom_g) / (100 + nom_g), 1),  # the primary deficit that holds debt/GDP steady today...
         stabilising_market=round(-d * (r_new - nom_g) / (100 + nom_g), 1),  # ...once the debt pays what new borrowing costs
